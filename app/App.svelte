@@ -1,7 +1,11 @@
-<frame>
-    <Home />
-</frame>
+<label text="HELLO FROM SVELTE NATIVE + BUN!" class="h1" />
 
-<script lang="ts">
-    import Home from './components/Home.svelte'
-</script>
+<style>
+    .h1 {
+        font-size: 30;
+        font-weight: bold;
+        color: #3A53FF;
+        text-align: center;
+        margin-top: 50;
+    }
+</style>

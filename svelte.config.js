@@ -11,7 +11,7 @@ const webpack_env = process.env['NATIVESCRIPT_WEBPACK_ENV']
     }
 module.exports = {
   compilerOptions: {
-    namespace: 'foreign',
+    // namespace: 'foreign', // Removed for Svelte 5 compatibility
   },
   preprocess: [
     sveltePreprocess({

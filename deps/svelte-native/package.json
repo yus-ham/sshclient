@@ -1,0 +1,23 @@
+{
+    "name": "@nativescript-community/svelte-native",
+    "version": "1.0.32",
+    "description": "Svelte integration for NativeScript",
+    "author": "David Pershouse",
+    "license": "MIT",
+    "sideEffects": false,
+    "peerDependencies": {
+        "@nativescript/core": "^9",
+        "svelte": "^5"
+    },
+    "keywords": [
+        "nativescript",
+        "svelte"
+    ],
+    "homepage": "https://github.com/nativescript-community/svelte-native",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/nativescript-community/svelte-native.git"
+    },
+    "main": "index.js",
+    "types": "index.d.ts"
+}

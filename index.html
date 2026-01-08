@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="./deps/web.css">
+    <style>
+        body { margin: 0; padding: 0; font-family: sans-serif; overflow-x: hidden; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    </style>
+    <script>
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.error('Window Error:', msg, 'at', url, ':', lineNo, ':', columnNo, error);
+            return false;
+        };
+        // Global Polyfills - Define global as a true global variable
+        var __ANDROID__ = false;
+        var __IOS__ = false;
+        var global = window.global = {};
+        global.window = global;
+        global.__ANDROID__ = __ANDROID__;
+        global.__IOS__ = __IOS__;
+        global.performance = window.performance;
+        global.setTimeout = window.setTimeout.bind(window);
+        global.clearTimeout = window.clearTimeout.bind(window);
+        global.setInterval = window.setInterval.bind(window);
+        global.clearInterval = window.clearInterval.bind(window);
+        global.requestAnimationFrame = window.requestAnimationFrame.bind(window);
+        global.cancelAnimationFrame = window.cancelAnimationFrame.bind(window);
+        console.log("Global shims initialized:", global);
+    </script>
+    <div id="app-root"></div>
+    <script src="./deps/dom-sync.js"></script>
+    <script type="module" src="./app/app.ts"></script>
+</head>
+</html>

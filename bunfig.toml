@@ -1,0 +1,4 @@
+
+[serve.static]
+plugins = ["./deps/bun-ns-resolver.ts", "bun-plugin-svelte"]
+env = "PUB_*"

@@ -1,4 +1,4 @@
-﻿.fab {
+.fab {
   font-family: 'Font Awesome 5 Brands', 'fa-brands-400';
   font-weight: 400;
 }
@@ -11,4 +11,19 @@
 .far {
   font-family: 'Font Awesome 5 Free', 'fa-regular-400';
   font-weight: 400;
+}
+
+/* NativeScript-valid CSS only below */
+.h2 {
+    font-size: 24;
+    font-weight: bold;
+}
+
+.p-20 {
+    padding: 20;
+}
+
+.btn-primary {
+    background-color: #3A53FF;
+    color: white;
 }

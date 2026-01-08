@@ -1,0 +1,12 @@
+import SvelteNativeDocument from "./svelte/SvelteNativeDocument";
+export { default as HeadElement } from "./svelte/HeadElement";
+export { default as TemplateElement } from "./svelte/TemplateElement";
+export { default as SvelteNativeDocument } from "./svelte/SvelteNativeDocument";
+export { default as StyleElement } from "./svelte/StyleElement";
+export { default as NativeElementNode, NativeElementPropConfig, NativeElementPropType, registerNativeConfigElement, } from "./native/NativeElementNode";
+export { default as NativeViewElementNode, registerNativeViewElement, } from "./native/NativeViewElementNode";
+export * from "./nativescript-elements";
+export * from "./basicdom";
+export * from "./navigation";
+export declare const DomTraceCategory = "SvelteNativeDom";
+export declare function initializeDom(): SvelteNativeDocument;
