@@ -29,6 +29,10 @@ Label {
     padding: 4px;
 }
 
+Label[text]::after, Button[text]::after {
+    content: attr(text);
+}
+
 Button {
     display: block;
     background-color: #3A53FF;
@@ -40,13 +44,26 @@ Button {
     cursor: pointer;
 }
 
-GridLayout {
-    display: block; /* Sederhanakan untuk web preview */
-    padding: 20px;
+StackLayout {
+    display: flex;
+    flex-direction: column;
 }
 
-/* Sederhanakan grid agar tidak merusak NS CSS */
+GridLayout {
+    display: grid;
+}
+
+GridLayout[columns="*, auto"] {
+    grid-template-columns: 1fr auto;
+}
+
+GridLayout[rows="auto, auto"] {
+    grid-template-rows: auto auto;
+}
+
 .connection-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
     border-bottom: 1px solid #ddd;
     padding: 10px;
     cursor: pointer;

@@ -17,8 +17,7 @@
 
 <page>
     <actionBar title="SSH Client" />
-    <stackLayout>
-        <!-- Svelte 5: Pass functions directly to props -->
+    <stackLayout class="p-20">
         <ConnectionList {connections} onadd={addNew} onconnect={handleConnect} />
     </stackLayout>
 </page>

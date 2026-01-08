@@ -12,24 +12,53 @@
             console.error('Window Error:', msg, 'at', url, ':', lineNo, ':', columnNo, error);
             return false;
         };
-        // Global Polyfills - Define global as a true global variable
+        // Global Polyfills
         var __ANDROID__ = false;
         var __IOS__ = false;
-        var global = window.global = {};
-        global.window = global;
-        global.__ANDROID__ = __ANDROID__;
-        global.__IOS__ = __IOS__;
-        global.performance = window.performance;
-        global.setTimeout = window.setTimeout.bind(window);
-        global.clearTimeout = window.clearTimeout.bind(window);
-        global.setInterval = window.setInterval.bind(window);
-        global.clearInterval = window.clearInterval.bind(window);
-        global.requestAnimationFrame = window.requestAnimationFrame.bind(window);
-        global.cancelAnimationFrame = window.cancelAnimationFrame.bind(window);
-        console.log("Global shims initialized:", global);
+        var global = window.global = window;
+        
+        // NativeScript tap event bridge
+        document.addEventListener('click', (e) => {
+            let target = e.target;
+            while (target) {
+                // Check if element has an ontap handler (Svelte 5 property)
+                if (typeof target.ontap === 'function') {
+                    target.ontap({ eventName: 'tap', object: target, eventData: e });
+                    break;
+                }
+                target = target.parentNode;
+            }
+        }, true);
+
+        // Property-to-Attribute sync shim for 'text' and other NS-specific props
+        const syncPropToAttr = (el) => {
+            if (el._isSynced) return;
+            el._isSynced = true;
+            
+            let textVal = el.text;
+            Object.defineProperty(el, 'text', {
+                get() { return textVal; },
+                set(v) {
+                    textVal = v;
+                    el.setAttribute('text', v);
+                },
+                configurable: true
+            });
+            if (textVal !== undefined) el.setAttribute('text', textVal);
+        };
+
+        new MutationObserver((mutations) => {
+            mutations.forEach(m => {
+                m.addedNodes.forEach(node => {
+                    if (node.nodeType === 1) {
+                        syncPropToAttr(node);
+                        node.querySelectorAll('*').forEach(syncPropToAttr);
+                    }
+                });
+            });
+        }).observe(document, { childList: true, subtree: true });
     </script>
     <div id="app-root"></div>
-    <script src="./deps/dom-sync.js"></script>
     <script type="module" src="./app/app.ts"></script>
 </head>
 </html>

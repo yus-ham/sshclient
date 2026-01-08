@@ -158,8 +158,7 @@
             }
         } else {
              // Still waiting for app to mount...
-             // console.log("Waiting for virtual root...");
         }
-    }, 5000);
+    }, 1500);
 
 })();

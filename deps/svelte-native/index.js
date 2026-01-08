@@ -8,23 +8,53 @@ global.__onLiveSyncCore = () => {
     Application.getRootView()?._onCssStateChange();
 };
 function svelteNativeNoFrame(rootElement, data) {
+    // WEB PREVIEW MODE (BUN/BROWSER)
+    if (typeof window !== 'undefined' && window.document) {
+        console.log("[SvelteNative] Web Preview Mode Activated");
+        return new Promise((resolve) => {
+            // Create a root container
+            let appRoot = document.getElementById('app-root');
+            if (!appRoot) {
+                appRoot = document.createElement('div');
+                appRoot.id = 'app-root';
+                document.body.appendChild(appRoot);
+            }
+            appRoot.innerHTML = ''; // Reset
+
+            // Mount Svelte 5 component directly to DOM
+            const instance = mount(rootElement, {
+                target: appRoot,
+                props: data || {}
+            });
+            resolve(instance);
+        });
+    }
+
+    // NATIVE MODE (Mobile)
     return new Promise((resolve, reject) => {
         let elementInstance;
         const buildElement = () => {
             let frag = createElement('fragment', window.document);
-            console.log("[SvelteNative] Mounting component to fragment...");
+            console.log("[SvelteNative] buildElement: frag created", frag);
             elementInstance = mount(rootElement, {
                 target: frag,
                 props: data || {}
             });
-            console.log("[SvelteNative] Mount complete. Fragment children:", frag.childNodes.length);
-            if (frag.firstChild) {
-                 console.log("[SvelteNative] First child:", frag.firstChild);
-                 return frag.firstChild.nativeElement || frag.firstChild;
-            } else {
-                 console.error("[SvelteNative] Fragment is empty after mount!");
-                 return frag; // Return fragment itself as fallback
+            
+            console.log("[SvelteNative] buildElement: mount done. childNodes count:", frag.childNodes.length);
+            
+            // Find first valid UI element (skip comments and empty text)
+            let root = frag.firstChild;
+            console.log("[SvelteNative] buildElement: firstChild is", root ? (root.constructor.name || root.tagName) : "null");
+
+            while (root && (root.nodeType === 8 || (root.nodeType === 3 && !root.text?.trim()))) {
+                 console.log("[SvelteNative] skipping node", root.nodeType);
+                 root = root.nextSibling;
             }
+            
+            const result = root ? (root.nativeElement || root) : frag;
+            console.log("[SvelteNative] buildElement: returning", result ? (result.constructor.name || result.tagName) : "null");
+            return result;
         };
         //wait for launch before returning
         Application.on(Application.launchEvent, () => {
