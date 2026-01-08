@@ -13,6 +13,10 @@ module.exports = {
   compilerOptions: {
     // namespace: 'foreign', // Removed for Svelte 5 compatibility
   },
+  onwarn(warning, handler) {
+    if (warning.code.startsWith('a11y-')) return;
+    handler(warning);
+  },
   preprocess: [
     sveltePreprocess({
       replace: [

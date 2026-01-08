@@ -1,0 +1,45 @@
+const webpack = require('@nativescript/webpack')
+const path = require('path')
+
+module.exports = (env) => {
+  webpack.init(env)
+
+  webpack.chainWebpack(config => {
+    // 1. Remove the problematic alias set by @nativescript/webpack for Svelte 4
+    config.resolve.alias.delete('svelte$');
+
+    // 2. Disable HMR for svelte-loader as it crashes with Svelte 5
+    config.module
+      .rule('svelte')
+      .use('svelte-loader')
+      .tap((options) => ({
+        ...options,
+        hotReload: false,
+      }));
+
+    // 3. Add a rule to transpile Svelte 5 internal code (ES2022) in node_modules
+    config.module
+      .rule('svelte-internal')
+      .test(/\.(js|mjs)$/)
+      .include.add(/node_modules\/svelte/)
+      .end()
+      .use('babel-loader')
+      .loader('babel-loader')
+      .options({
+        presets: [['@babel/preset-env', { targets: { esmodules: true } }]],
+        plugins: ['@babel/plugin-transform-class-properties', '@babel/plugin-transform-private-methods']
+      });
+  });
+
+  webpack.mergeWebpack({
+    resolve: {
+      // 4. Force 'browser' condition to avoid SSR renderer issues
+      conditionNames: ['svelte', 'browser', 'import'],
+      alias: {
+        tslib: require.resolve('tslib/tslib.es6.mjs'),
+      },
+    },
+  })
+
+  return webpack.resolveConfig()
+}

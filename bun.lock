@@ -10,10 +10,12 @@
       },
       "devDependencies": {
         "@nativescript-community/svelte-native-preprocessor": "file:./deps/svelte-native-preprocessor",
+        "@nativescript/android": "9.0.2",
         "@nativescript/preview-cli": "1.0.14",
         "@nativescript/types": "~9.0.0",
         "@nativescript/webpack": "~5.0.28",
         "bun-plugin-svelte": "^0.0.6",
+        "ignore-loader": "^0.1.2",
         "svelte": "~5",
         "svelte-loader": "^3.2.4",
         "svelte-preprocess": "^6.0.3",
@@ -91,6 +93,8 @@
     "@nativescript-community/svelte-native": ["@nativescript-community/svelte-native@file:deps/svelte-native", { "peerDependencies": { "@nativescript/core": "^9", "svelte": "^5" } }],
 
     "@nativescript-community/svelte-native-preprocessor": ["@nativescript-community/svelte-native-preprocessor@file:deps/svelte-native-preprocessor", { "devDependencies": { "@types/estree": "^1.0.8", "@types/mocha": "^5.2.6", "@types/node": "^11.10.4", "@types/parse5": "^5.0.3", "estree-walker": "3.0.3", "magic-string": "^0.25.2", "mocha": "^8.3.2", "parse5": "^5.1.0", "rollup": "^1.12.2", "rollup-plugin-commonjs": "10.0.0", "rollup-plugin-node-resolve": "5.0.0", "rollup-plugin-typescript2": "^0.36.0", "sucrase": "^3.10.1", "svelte": "^5", "typescript": "5.9.2" }, "peerDependencies": { "svelte": "^5" } }],
+
+    "@nativescript/android": ["@nativescript/android@9.0.2", "", {}, "sha512-kkliGNCZhbs5SM/EFA7KQaNLJLGFFJF/y6lAWr2hsfNv7n5DU5+5+pNIJ/+u4zyYoKijR2Iq3q/1QKBXthCGoQ=="],
 
     "@nativescript/core": ["@nativescript/core@9.0.11", "", { "dependencies": { "@csstools/css-calc": "~2.1.4", "@csstools/css-color-parser": "^3.0.10", "@csstools/css-parser-algorithms": "^3.0.5", "@csstools/css-tokenizer": "^3.0.4", "@nativescript/hook": "~3.0.4", "acorn": "^8.15.0", "css-tree": "^3.1.0", "css-what": "^7.0.0", "emoji-regex": "^10.2.1", "source-map": "0.7.6", "source-map-js": "^1.2.1", "tslib": "^2.0.0" } }, ""],
 
@@ -437,6 +441,8 @@
     "html-escaper": ["html-escaper@2.0.2", "", {}, ""],
 
     "icss-utils": ["icss-utils@5.1.0", "", { "peerDependencies": { "postcss": "^8.1.0" } }, ""],
+
+    "ignore-loader": ["ignore-loader@0.1.2", "", {}, "sha512-yOJQEKrNwoYqrWLS4DcnzM7SEQhRKis5mB+LdKKh4cPmGYlLPR0ozRzHV5jmEk2IxptqJNQA5Cc0gw8Fj12bXA=="],
 
     "immutable": ["immutable@5.1.4", "", {}, ""],
 

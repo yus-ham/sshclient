@@ -14,20 +14,21 @@
 </script>
 
 <stackLayout class="p-20">
-    <label text="Saved Connections" class="h2" />
+    <label text="Saved Connections" class="h2"></label>
     {#each connections as conn}
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
         <gridLayout columns="*, auto" class="connection-item" ontap={() => connect(conn)}>
             <stackLayout col="0">
-                <label text="{conn.name}" class="connection-name" />
-                <label text="{conn.user}@{conn.host}" class="connection-details" />
+                <label text="{conn.name}" class="connection-name"></label>
+                <label text="{conn.user}@{conn.host}" class="connection-details"></label>
             </stackLayout>
-            <label col="1" class="fas" text="&#xf105;" />
+            <label col="1" class="fas" text="&#xf105;"></label>
         </gridLayout>
     {:else}
-        <label text="No connections saved yet." class="p-10" />
+        <label text="No connections saved yet." class="p-10"></label>
     {/each}
 
-    <button text="Add New Connection" class="btn-primary" ontap={addConnection} />
+    <button text="Add New Connection" class="btn-primary" ontap={addConnection}></button>
 </stackLayout>
 
 <style>

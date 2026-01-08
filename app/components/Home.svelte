@@ -38,15 +38,17 @@
 </script>
 
 <page>
-    <actionBar title="SSH Client" />
+    <actionBar title="SSH Client"></actionBar>
     <stackLayout class="p-20">
-        <ConnectionList {connections} onadd={addNew} onconnect={handleConnect} />
+        <ConnectionList {connections} onadd={addNew} onconnect={handleConnect}></ConnectionList>
         
         <wrapLayout class="footer-container" orientation="horizontal" horizontalAlignment="center">
-            <label text="built with ❤️  using " class="footer-text" />
-            <label text="bun" class="link footer-text" ontap={() => openLink('https://bun.sh')} />
-            <label text=" + " class="footer-text" />
-            <label text="svelte-native" class="link footer-text" ontap={() => openLink('https://svelte.nativescript.org/')} />
+            <label text="built with ❤️  using " class="footer-text"></label>
+            <!-- svelte-ignore a11y_no_noninteractive_element_interactions, a11y_click_events_have_key_events -->
+            <label text="bun" class="link footer-text" ontap={() => openLink('https://bun.sh')}></label>
+            <label text=" + " class="footer-text"></label>
+            <!-- svelte-ignore a11y_no_noninteractive_element_interactions, a11y_click_events_have_key_events -->
+            <label text="svelte-native" class="link footer-text" ontap={() => openLink('https://svelte.nativescript.org/')}></label>
         </wrapLayout>
     </stackLayout>
 </page>
