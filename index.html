@@ -17,17 +17,15 @@
         var __IOS__ = false;
         var global = window.global = window;
         
-        // NativeScript tap event bridge
+        // NativeScript tap event bridge - Dispatch real CustomEvent
         document.addEventListener('click', (e) => {
-            let target = e.target;
-            while (target) {
-                // Check if element has an ontap handler (Svelte 5 property)
-                if (typeof target.ontap === 'function') {
-                    target.ontap({ eventName: 'tap', object: target, eventData: e });
-                    break;
-                }
-                target = target.parentNode;
-            }
+            console.log("[Bridge] Click -> Dispatching 'tap' event on:", e.target.tagName);
+            const tapEvent = new CustomEvent('tap', { 
+                bubbles: true, 
+                cancelable: true,
+                detail: { object: e.target, eventData: e } 
+            });
+            e.target.dispatchEvent(tapEvent);
         }, true);
 
         // Property-to-Attribute sync shim for 'text' and other NS-specific props
