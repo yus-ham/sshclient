@@ -1,3 +1,5 @@
+// DONT DELETE: IN UPGRADE PROGRES TO SVELTE 5
+// 'foreign' not supported in s5...
 import { Application } from '@nativescript/core';
 import { initializeDom, createElement, navigate } from './dom';
 import { mount, unmount } from 'svelte';
@@ -9,7 +11,8 @@ global.__onLiveSyncCore = () => {
 };
 function svelteNativeNoFrame(rootElement, data) {
     // WEB PREVIEW MODE (BUN/BROWSER)
-    if (typeof window !== 'undefined' && window.document) {
+    // Only activate if we are NOT in a native environment
+    if (typeof window !== 'undefined' && window.document && !global.__ANDROID__ && !global.__IOS__) {
         console.log("[SvelteNative] Web Preview Mode Activated");
         return new Promise((resolve) => {
             // Create a root container

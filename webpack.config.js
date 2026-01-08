@@ -5,10 +5,9 @@ const path = require('path');
 module.exports = (env) => {
     webpack.init(env);
 
-    // 1. Jalankan Bun Bundler untuk memproses Svelte 5 & App Logic
+    // 1. Jalankan Bun Bundler
     const platform = env.android ? 'android' : 'ios';
-    console.log(`
-[Bun-Wrapper] 🚀 Compiling Svelte 5 with Bun...`);
+    console.log(`\n[Bun-Wrapper] 🚀 Compiling Svelte 5 with Bun (MINIFY OFF)...`);
     spawnSync('bun', ['bun.build.ts'], {
         env: { ...process.env, NS_PLATFORM: platform },
         stdio: 'inherit',
@@ -17,15 +16,11 @@ module.exports = (env) => {
     });
 
     webpack.chainWebpack(config => {
-        // Hapus alias svelte$ bawaan yang bermasalah (Svelte 4 style)
         config.resolve.alias.delete('svelte$');
-
-        // GANTI Entry 'bundle' dengan hasil build dari Bun
-        // Ini memastikan logic Svelte 5 yang sudah dibundel Bun masuk ke NS
         config.entry('bundle').clear().add('./app/bundle.js');
         
-        // Tetap biarkan Webpack menangani 'runtime' dan 'vendor' 
-        // agar jembatan NativeScript Android (JavaProxy) tidak rusak.
+        // MATIKAN SEMUA OPTIMASI WEBPACK UNTUK DEBUGGING
+        config.optimization.minimize(false);
     });
 
     return webpack.resolveConfig();

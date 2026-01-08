@@ -19,16 +19,143 @@ class ViewNode {
         this.nodeType = null;
         this.childNodes = [];
         this.parentNode = null;
-        this.nextSibling = null;
-        this.prevSibling = null;
+        this.tagName = null;
     }
-    appendChild(child) { this.childNodes.push(child); child.parentNode = this; return child; }
-    insertBefore(child, ref) { this.childNodes.push(child); return child; }
-    removeChild(child) { return child; }
-    setAttribute() {}
-    getAttribute() {}
-    cloneNode() { return this; }
 }
+
+// Svelte 5 retrieves getters from the prototype during init_operations.
+// We must define them explicitly so Object.getOwnPropertyDescriptor works.
+Object.defineProperties(ViewNode.prototype, {
+    firstChild: {
+        get() { 
+            if (this.childNodes) return this.childNodes[0] || null;
+            if (this.content) return this.content;
+            if (this.getChildrenCount && this.getChildrenCount() > 0) return this.getChildAt(0);
+            return null;
+        },
+        configurable: true
+    },
+    lastChild: {
+        get() { 
+            if (this.childNodes) return this.childNodes[this.childNodes.length - 1] || null;
+            if (this.content) return this.content;
+            const count = this.getChildrenCount ? this.getChildrenCount() : 0;
+            if (count > 0) return this.getChildAt(count - 1);
+            return null;
+        },
+        configurable: true
+    },
+    nextSibling: {
+        get() {
+            const parent = this.parentNode || this.parent;
+            if (!parent) return null;
+            if (parent.childNodes) {
+                const index = parent.childNodes.indexOf(this);
+                return parent.childNodes[index + 1] || null;
+            }
+            if (parent.getChildIndex && parent.getChildAt) {
+                const index = parent.getChildIndex(this);
+                if (index !== -1 && index < parent.getChildrenCount() - 1) {
+                    return parent.getChildAt(index + 1);
+                }
+            }
+            return null;
+        },
+        configurable: true
+    },
+    previousSibling: {
+        get() {
+            const parent = this.parentNode || this.parent;
+            if (!parent) return null;
+            if (parent.childNodes) {
+                const index = parent.childNodes.indexOf(this);
+                return parent.childNodes[index - 1] || null;
+            }
+            if (parent.getChildIndex && parent.getChildAt) {
+                const index = parent.getChildIndex(this);
+                if (index > 0) return parent.getChildAt(index - 1);
+            }
+            return null;
+        },
+        configurable: true
+    },
+    parent: {
+        get() { return this.parentNode; },
+        configurable: true
+    },
+    content: {
+        get() {
+            if (this.tagName === 'template') {
+                if (!this._content) {
+                    this._content = installGlobalShims().createDocumentFragment();
+                }
+                return this._content;
+            }
+            return undefined;
+        },
+        configurable: true
+    }
+});
+
+// Implementation of methods
+Object.assign(ViewNode.prototype, {
+    set innerHTML(html) {
+        this.childNodes = [];
+    },
+    appendChild(child) { 
+        this.childNodes.push(child); 
+        child.parentNode = this; 
+        return child; 
+    },
+    insertBefore(child, ref) { 
+        const index = ref ? this.childNodes.indexOf(ref) : -1;
+        if (index !== -1) {
+            this.childNodes.splice(index, 0, child);
+        } else {
+            this.childNodes.push(child);
+        }
+        child.parentNode = this;
+        return child; 
+    },
+    removeChild(child) { 
+        const index = this.childNodes.indexOf(child);
+        if (index !== -1) {
+            this.childNodes.splice(index, 1);
+            child.parentNode = null;
+        }
+        return child; 
+    },
+    remove() {
+        if (this.parentNode) {
+            this.parentNode.removeChild(this);
+        }
+    },
+    before(...nodes) {
+        if (!this.parentNode) return;
+        for (const node of nodes) {
+            this.parentNode.insertBefore(node, this);
+        }
+    },
+    after(...nodes) {
+        if (!this.parentNode) return;
+        const next = this.nextSibling;
+        for (const node of nodes) {
+            this.parentNode.insertBefore(node, next);
+        }
+    },
+    cloneNode(deep) {
+        const copy = new ViewNode();
+        copy.nodeType = this.nodeType;
+        copy.tagName = this.tagName;
+        copy.text = this.text;
+        if (deep) {
+            this.childNodes.forEach(c => copy.appendChild(c.cloneNode(true)));
+        }
+        return copy;
+    },
+    setAttribute() {},
+    getAttribute() {}
+});
 
 function registerElement(elementName, resolver) {
     elementMap[normalizeElementName(elementName)] = { resolver };
@@ -36,16 +163,32 @@ function registerElement(elementName, resolver) {
 
 function createElement(elementName) {
     const normalized = normalizeElementName(elementName);
-    if (elementMap[normalized]) return elementMap[normalized].resolver();
-    return new ViewNode();
+    const node = elementMap[normalized] ? elementMap[normalized].resolver() : new ViewNode();
+    node.nodeType = 1;
+    node.tagName = normalized;
+    return node;
 }
 
 function installGlobalShims() {
     let snDoc = {
         createElement,
-        createTextNode: (t) => ({ nodeType: 3, text: t }),
-        createComment: (t) => ({ nodeType: 8, text: t }),
-        createDocumentFragment: () => ({ nodeType: 11, childNodes: [] }),
+        createTextNode: (t) => {
+            const node = new ViewNode();
+            node.nodeType = 3;
+            node.text = t;
+            return node;
+        },
+        createComment: (t) => {
+            const node = new ViewNode();
+            node.nodeType = 8;
+            node.text = t;
+            return node;
+        },
+        createDocumentFragment: () => {
+            const node = new ViewNode();
+            node.nodeType = 11;
+            return node;
+        },
         body: new ViewNode(),
         head: new ViewNode()
     };
@@ -69,6 +212,19 @@ function installGlobalShims() {
     if (globalRef.__ANDROID__ === undefined) globalRef.__ANDROID__ = false;
     if (globalRef.__IOS__ === undefined) globalRef.__IOS__ = false;
 
+    // Svelte 5 expects navigator to exist in 'browser' target
+    if (!globalRef.navigator) {
+        globalRef.navigator = { userAgent: "NativeScript" };
+    }
+
+    // Svelte 5 expects Node, Element, and Text to exist globally
+    if (!globalRef.Node) globalRef.Node = ViewNode;
+    if (!globalRef.Element) globalRef.Element = ViewNode;
+    if (!globalRef.Text) globalRef.Text = ViewNode;
+    if (!globalRef.Comment) globalRef.Comment = ViewNode;
+    if (!globalRef.DocumentFragment) globalRef.DocumentFragment = ViewNode;
+    if (!globalRef.Document) globalRef.Document = ViewNode;
+
     return snDoc;
 }
 
@@ -87,6 +243,48 @@ function initializeDom() {
 }
 
 initializeDom();
+
+// Patch NativeScript View prototype to be Svelte 5 compatible
+const ViewPrototype = View.prototype;
+if (ViewPrototype) {
+    Object.defineProperties(ViewPrototype, {
+        parentNode: {
+            get() { return this.parent; },
+            configurable: true
+        },
+        firstChild: {
+            get() {
+                if (this.content) return this.content;
+                if (this.getChildrenCount && this.getChildrenCount() > 0) {
+                    return this.getChildAt(0);
+                }
+                return null;
+            },
+            configurable: true
+        },
+        nextSibling: {
+            get() {
+                if (!this.parent || !this.parent.getChildIndex) return null;
+                const index = this.parent.getChildIndex(this);
+                if (index === -1 || index >= this.parent.getChildrenCount() - 1) return null;
+                return this.parent.getChildAt(index + 1);
+            },
+            configurable: true
+        }
+    });
+    ViewPrototype.before = function(...nodes) {
+        if (!this.parent || !this.parent.insertChild) return;
+        const index = this.parent.getChildIndex(this);
+        nodes.forEach((node, i) => {
+            this.parent.insertChild(node, index + i);
+        });
+    };
+    ViewPrototype.remove = function() {
+        if (this.parent && this.parent.removeChild) {
+            this.parent.removeChild(this);
+        }
+    };
+}
 
 export { initializeDom, createElement, installGlobalShims };
 // Dummy exports for compatibility

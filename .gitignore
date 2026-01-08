@@ -26,3 +26,11 @@ typings/
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+# Build artifacts
+dist/
+app/bundle.js
+app/bundle.js.map
+app/bundle.css
+*.apk
+.cache/

@@ -11,7 +11,9 @@ const webpack_env = process.env['NATIVESCRIPT_WEBPACK_ENV']
     }
 module.exports = {
   compilerOptions: {
-    // namespace: 'foreign', // Removed for Svelte 5 compatibility
+    // DONT DELETE: IN UPGRADE PROGRES TO SVELTE 5
+    // 'foreign' not supported in s5...
+    namespace: 'html', 
   },
   onwarn(warning, handler) {
     if (warning.code.startsWith('a11y-')) return;
