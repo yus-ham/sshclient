@@ -498,8 +498,15 @@ if (ViewPrototype) {
         if (child instanceof View) {
             if (this.addChild) {
                 this.addChild(child);
-            } else if ("content" in this) {
-                this.content = child;
+            } else {
+                const isActionBar = child.constructor.name === 'ActionBar' || child.tagName === 'actionbar';
+                if (isActionBar && ("actionBar" in this)) {
+                    this.actionBar = child;
+                } else if ("content" in this) {
+                    this.content = child;
+                } else {
+                    console.warn(`[SvelteNative] orphan View: parent ${this.tagName || this.constructor.name} has no addChild or content property to hold ${child.tagName || child.constructor.name}`);
+                }
             }
         } else {
             console.log(`[SvelteNative] bypass append: node type ${child.nodeType} (${child.tagName || child.nodeName}) is not a View, skipping native append.`);
@@ -525,8 +532,15 @@ if (ViewPrototype) {
             if (this.insertChild && ref) {
                 const index = this.getChildIndex(ref);
                 this.insertChild(child, index);
+            } else if (this.addChild) {
+                this.addChild(child);
             } else {
-                this.appendChild(child);
+                const isActionBar = child.constructor.name === 'ActionBar' || child.tagName === 'actionbar';
+                if (isActionBar && ("actionBar" in this)) {
+                    this.actionBar = child;
+                } else if ("content" in this) {
+                    this.content = child;
+                }
             }
         }
         return child;
