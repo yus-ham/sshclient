@@ -555,12 +555,6 @@ if (ViewPrototype) {
     ViewPrototype.getAttribute = function (name) {
         return this[name];
     };
-    ViewPrototype.addEventListener = function (event, callback) {
-        this.on(event, callback);
-    };
-    ViewPrototype.removeEventListener = function (event, callback) {
-        this.off(event, callback);
-    };
     ViewPrototype.remove = function () {
         if (this.parentNode) {
             this.parentNode.removeChild(this);
