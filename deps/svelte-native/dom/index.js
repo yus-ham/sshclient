@@ -73,11 +73,23 @@ class ViewNode {
         copy.nodeType = this.nodeType;
         copy.tagName = this.tagName;
         copy.text = this.text;
+        
+        // Copy tracked attributes
+        if (this._svelteAttributes) {
+            this._svelteAttributes.forEach(attr => {
+                copy.setAttribute(attr, this[attr]);
+            });
+        }
+
         if (this._content) {
             copy._content = this._content.cloneNode(deep);
         }
-        if (deep) {
-            this.childNodes.forEach(c => copy.appendChild(c.cloneNode(true)));
+
+        if (deep && this.childNodes) {
+            this.childNodes.forEach(c => {
+                const childClone = c.cloneNode(true);
+                if (childClone) copy.appendChild(childClone);
+            });
         }
         return copy;
     }
@@ -267,7 +279,6 @@ function registerElement(elementName, resolver) {
 
 function createElement(elementName) {
     const normalized = normalizeElementName(elementName);
-    console.log(`[createElement] Creating: ${normalized}`);
     const type = (normalized === 'fragment') ? 11 : 1;
     const node = elementMap[normalized] ? elementMap[normalized].resolver() : new ViewNode(type);
     node.tagName = normalized;
@@ -503,6 +514,9 @@ if (ViewPrototype) {
                 if (isActionBar && ("actionBar" in this)) {
                     this.actionBar = child;
                 } else if ("content" in this) {
+                    if (this.content && this.content !== child) {
+                        console.warn(`[SvelteNative] content overwrite on ${this.tagName || this.constructor.name}: replacing ${this.content.tagName || this.content.constructor.name} with ${child.tagName || child.constructor.name}`);
+                    }
                     this.content = child;
                 } else {
                     console.warn(`[SvelteNative] orphan View: parent ${this.tagName || this.constructor.name} has no addChild or content property to hold ${child.tagName || child.constructor.name}`);
@@ -520,6 +534,7 @@ if (ViewPrototype) {
             child.childNodes = [];
             return child;
         }
+        
         const idx = ref ? this.childNodes.indexOf(ref) : -1;
         if (idx !== -1) {
             this.childNodes.splice(idx, 0, child);
@@ -529,9 +544,15 @@ if (ViewPrototype) {
         child.parentNode = this;
 
         if (child instanceof View) {
+            // Calculate actual native index by counting only View instances
+            let nativeIndex = 0;
+            for (const node of this.childNodes) {
+                if (node === child) break;
+                if (node instanceof View) nativeIndex++;
+            }
+
             if (this.insertChild && ref) {
-                const index = this.getChildIndex(ref);
-                this.insertChild(child, index);
+                this.insertChild(child, nativeIndex);
             } else if (this.addChild) {
                 this.addChild(child);
             } else {
@@ -547,6 +568,10 @@ if (ViewPrototype) {
     };
     ViewPrototype.setAttribute = function (name, value) {
         this[name] = value;
+        // Track attributes for cloning
+        this._svelteAttributes = this._svelteAttributes || new Set();
+        this._svelteAttributes.add(name);
+
         if (name.startsWith("on")) {
             const eventName = name.slice(2).toLowerCase();
             this.on(eventName, value);
@@ -562,12 +587,45 @@ if (ViewPrototype) {
             this.parent.removeChild(this);
         }
     };
+
+    const originalAddChild = ViewPrototype.addChild;
+    ViewPrototype.addChild = function (child) {
+        if (this.tagName === 'stacklayout' || this.constructor.name === 'StackLayout') {
+            console.log(`[NATIVE-ADD] to ${this.tagName || this.constructor.name}: ${child.tagName || child.constructor.name}`);
+        }
+        if (originalAddChild) return originalAddChild.call(this, child);
+    };
+
+    const originalInsertChild = ViewPrototype.insertChild;
+    ViewPrototype.insertChild = function (child, index) {
+        if (this.tagName === 'stacklayout' || this.constructor.name === 'StackLayout') {
+            console.log(`[NATIVE-INSERT] to ${this.tagName || this.constructor.name}: ${child.tagName || child.constructor.name} at ${index}`);
+        }
+        if (originalInsertChild) return originalInsertChild.call(this, child, index);
+    };
+
     ViewPrototype.cloneNode = function (deep) {
-        console.log(`[ViewPrototype] cloneNode: ${this.tagName || this.constructor.name}, deep: ${deep}, children: ${this.childNodes?.length || 0}`);
         const copy = this.tagName ? createElement(this.tagName) : createElement(this.constructor.name.toLowerCase());
         copy.nodeType = this.nodeType;
-        if (deep) {
-            this.childNodes.forEach(c => copy.appendChild(c.cloneNode(true)));
+        
+        // Copy tracked attributes
+        if (this._svelteAttributes) {
+            this._svelteAttributes.forEach(attr => {
+                try {
+                    copy.setAttribute(attr, this[attr]);
+                } catch (e) {
+                    // Ignore native property errors
+                }
+            });
+        }
+
+        if (deep && this.childNodes) {
+            this.childNodes.forEach(c => {
+                const childClone = c.cloneNode(true);
+                if (childClone) {
+                    copy.appendChild(childClone);
+                }
+            });
         }
         return copy;
     };

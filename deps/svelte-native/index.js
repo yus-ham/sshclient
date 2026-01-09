@@ -56,13 +56,27 @@ function svelteNativeNoFrame(rootElement, data) {
             }
             
             const result = root ? (root.nativeElement || root) : frag;
-            console.log("[SvelteNative] buildElement: returning detail", {
-                type: typeof result,
+            if (result) {
+                let sampleText = "NONE";
+                let content = result.content;
+                if (content) {
+                    if (content.text) sampleText = content.text;
+                    else if (content.getChildrenCount && content.getChildrenCount() > 0) {
+                        let first = content.getChildAt(0);
+                        sampleText = first.text || `Tag: ${first.tagName || first.constructor.name}`;
+                    }
+                }
+                console.log("[SvelteNative] DEEP CONTENT CHECK:", {
+                    contentTag: content?.tagName || content?.constructor.name,
+                    sampleText: sampleText,
+                    visualChildren: content?.getChildrenCount ? content.getChildrenCount() : 0
+                });
+            }
+            console.log("[SvelteNative] buildElement: FINAL RESULT CHECK", {
                 constructor: result?.constructor?.name,
-                tagName: result?.tagName,
-                nodeType: result?.nodeType,
-                hasSetup: typeof result?._setupAsRootView === 'function',
-                keys: result ? Object.keys(result).slice(0, 15) : []
+                tag: result?.tagName,
+                hasContent: !!result?.content,
+                actionBar: !!result?.actionBar
             });
             return result;
         };
