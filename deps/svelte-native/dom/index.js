@@ -1,8 +1,5 @@
-import { Frame, Application, ObservableArray, LayoutBase, ContentView, KeyframeAnimation, Page, ListView, TabView, TabViewItem, ActionBar, NavigationButton, ActionItem, Label, DatePicker, AbsoluteLayout, ActivityIndicator, Button, DockLayout, GridLayout, HtmlView, Image, ListPicker, FlexboxLayout, FormattedString, Span, Placeholder, Progress, ProxyViewContainer, RootLayout, ScrollView, SearchBar, SegmentedBar, SegmentedBarItem, Slider, StackLayout, Switch, TextField, TextView, TimePicker, WebView, WrapLayout, View, Trace } from '@nativescript/core';
-import { CssAnimationParser } from '@nativescript/core/ui/styling/css-animation-parser';
-import { time } from '@nativescript/core/profiling';
+import { View } from '@nativescript/core';
 import { _rootModalViews } from '@nativescript/core/ui/core/view';
-import { mount, unmount } from 'svelte';
 
 const globalRef = typeof global !== 'undefined' ? global : window;
 const isBrowser = typeof window !== 'undefined';
@@ -22,16 +19,16 @@ class ViewNode {
         this.tagName = null;
         this.text = null;
     }
-    get nodeName() { 
+    get nodeName() {
         const name = (this.nodeType === 3) ? "#text" :
-                     (this.nodeType === 8) ? "#comment" :
-                     (this.nodeType === 11) ? "#document-fragment" :
-                     (this.tagName || "").toUpperCase();
+            (this.nodeType === 8) ? "#comment" :
+                (this.nodeType === 11) ? "#document-fragment" :
+                    (this.tagName || "").toUpperCase();
         console.log(`[ViewNode] nodeName: ${name} (type: ${this.nodeType})`);
         return name;
     }
     get namespaceURI() { return "http://www.w3.org/1999/xhtml"; }
-    
+
     // DOM compatibility for Svelte 5
     get textContent() { return this.text; }
     set textContent(v) { this.text = v; }
@@ -44,8 +41,8 @@ class ViewNode {
 
     get content() { return this._content; }
 
-    setAttribute(name, value) { 
-        this[name] = value; 
+    setAttribute(name, value) {
+        this[name] = value;
         if (name === "class") this.className = value;
         if (name.startsWith("on")) {
             const eventName = name.slice(2).toLowerCase();
@@ -56,11 +53,20 @@ class ViewNode {
             }
         }
     }
-    getAttribute(name) { 
-        return this[name]; 
+    getAttribute(name) {
+        return this[name];
     }
     removeAttribute(name) {
         delete this[name];
+    }
+    addEventListener(event, callback) {
+        this._listeners = this._listeners || {};
+        (this._listeners[event] = this._listeners[event] || []).push(callback);
+    }
+    removeEventListener(event, callback) {
+        if (this._listeners && this._listeners[event]) {
+            this._listeners[event] = this._listeners[event].filter(l => l !== callback);
+        }
     }
 }
 
@@ -68,19 +74,19 @@ class ViewNode {
 // We must define them explicitly so Object.getOwnPropertyDescriptor works.
 Object.defineProperties(ViewNode.prototype, {
     firstChild: {
-        get() { 
+        get() {
             let res = null;
             if (this.childNodes && this.childNodes.length > 0) res = this.childNodes[0];
             else if (this.content) res = this.content;
             else if (this.getChildrenCount && this.getChildrenCount() > 0) res = this.getChildAt(0);
-            
+
             console.log(`[ViewNode] Get firstChild of ${this.tagName} (Type: ${this.nodeType}). Result: ${res ? (res.tagName || res.nodeName) : "NULL"}`);
             return res;
         },
         configurable: true
     },
     lastChild: {
-        get() { 
+        get() {
             if (this.childNodes && this.childNodes.length > 0) return this.childNodes[this.childNodes.length - 1];
             if (this.content) return this.content;
             const count = this.getChildrenCount ? this.getChildrenCount() : 0;
@@ -137,12 +143,12 @@ Object.defineProperties(ViewNode.prototype, {
             const target = this.tagName === 'template' ? this.content : this;
             target.childNodes = [];
             if (!html) return;
-            
+
             // Match comments, tags, or text (preserving whitespace)
             const tagRegex = /(<!--.*?-->)|(<([a-zA-Z0-9-]+)([^>]*?)>)|(<\/([a-zA-Z0-9-]+)>)|([^<]+)/gs;
             let match;
             let currentParent = target;
-            
+
             while ((match = tagRegex.exec(html)) !== null) {
                 if (match[1]) { // Comment
                     const commentText = match[1].slice(4, -3);
@@ -150,7 +156,7 @@ Object.defineProperties(ViewNode.prototype, {
                 } else if (match[3]) { // Open tag
                     const tagName = match[3].toLowerCase();
                     const node = createElement(tagName);
-                    
+
                     const attrStr = match[4];
                     if (attrStr) {
                         const attrRegex = /([a-zA-Z0-9-]+)="([^"]*)"/g;
@@ -159,31 +165,31 @@ Object.defineProperties(ViewNode.prototype, {
                             node.setAttribute(attrMatch[1], attrMatch[2]);
                         }
                     }
-                    
-                                    currentParent.appendChild(node);
-                                    const isSelfClosing = attrStr && attrStr.trim().endsWith('/');
-                                    const voidTags = ["image", "activityindicator", "progress", "slider", "switch"];
-                                    const isVoid = voidTags.includes(tagName) || isSelfClosing;
-                                    if (!isVoid) {
-                                        currentParent = node;
-                                    }
-                                } else if (match[6]) { // Close tag
-                                    const tagName = match[6].toLowerCase();
-                                    const voidTags = ["image", "activityindicator", "progress", "slider", "switch"];
-                                    if (!voidTags.includes(tagName)) {
-                                        currentParent = currentParent.parentNode || target;
-                                    }
-                                                                } else if (match[7]) { // Text (KEEP WHITESPACE for Svelte 5 walking)
-                                                                    currentParent.appendChild(installGlobalShims().createTextNode(match[7]));
-                                                                }
-                                                            }
-                                                        },
-                                                        configurable: true
-                                                    }
-                                                });
+
+                    currentParent.appendChild(node);
+                    const isSelfClosing = attrStr && attrStr.trim().endsWith('/');
+                    const voidTags = ["image", "activityindicator", "progress", "slider", "switch"];
+                    const isVoid = voidTags.includes(tagName) || isSelfClosing;
+                    if (!isVoid) {
+                        currentParent = node;
+                    }
+                } else if (match[6]) { // Close tag
+                    const tagName = match[6].toLowerCase();
+                    const voidTags = ["image", "activityindicator", "progress", "slider", "switch"];
+                    if (!voidTags.includes(tagName)) {
+                        currentParent = currentParent.parentNode || target;
+                    }
+                } else if (match[7]) { // Text (KEEP WHITESPACE for Svelte 5 walking)
+                    currentParent.appendChild(installGlobalShims().createTextNode(match[7]));
+                }
+            }
+        },
+        configurable: true
+    }
+});
 
 Object.assign(ViewNode.prototype, {
-    appendChild(child) { 
+    appendChild(child) {
         console.log(`(${this.nodeType}|${this.tagName}).appendChild: (${child.nodeType}|${child.tagName || child.nodeName})`);
         if (this.tagName === 'template') return this.content.appendChild(child);
         if (child.nodeType === 11) {
@@ -192,11 +198,11 @@ Object.assign(ViewNode.prototype, {
             child.childNodes = [];
             return child;
         }
-        this.childNodes.push(child); 
-        child.parentNode = this; 
-        return child; 
+        this.childNodes.push(child);
+        child.parentNode = this;
+        return child;
     },
-    insertBefore(child, ref) { 
+    insertBefore(child, ref) {
         console.log(`(${this.nodeType}|${this.tagName}).insertBefore: (${child.nodeType}|${child.tagName || child.nodeName})`);
         if (this.tagName === 'template') return this.content.insertBefore(child, ref);
         if (child.nodeType === 11) {
@@ -212,15 +218,15 @@ Object.assign(ViewNode.prototype, {
             this.childNodes.push(child);
         }
         child.parentNode = this;
-        return child; 
+        return child;
     },
-    removeChild(child) { 
+    removeChild(child) {
         const index = this.childNodes.indexOf(child);
         if (index !== -1) {
             this.childNodes.splice(index, 1);
             child.parentNode = null;
         }
-        return child; 
+        return child;
     },
     remove() {
         if (this.parentNode) {
@@ -301,13 +307,13 @@ function installGlobalShims() {
     // ONLY provide global document for libraries that expect it, 
     // but DO NOT hijack the real window.document factories if in browser
     if (!globalRef.document) globalRef.document = snDoc;
-    
+
     // Safety check for window property
     if (typeof window !== 'undefined') {
         if (globalRef === window) {
             // Already window, no need to set
         } else {
-            try { globalRef.window = globalRef; } catch(e) {}
+            try { globalRef.window = globalRef; } catch (e) { }
         }
     } else {
         globalRef.window = globalRef;
@@ -366,8 +372,8 @@ if (ViewPrototype) {
             configurable: true
         },
         nodeName: {
-            get() { 
-                const name = (this.tagName || this.constructor.name || "").toUpperCase(); 
+            get() {
+                const name = (this.tagName || this.constructor.name || "").toUpperCase();
                 console.log(`[ViewPrototype] nodeName: ${name} (type: ${this.nodeType})`);
                 return name;
             },
@@ -420,14 +426,14 @@ if (ViewPrototype) {
             configurable: true
         }
     });
-    ViewPrototype.before = function(...nodes) {
+    ViewPrototype.before = function (...nodes) {
         if (!this.parent || !this.parent.insertChild) return;
         const index = this.parent.getChildIndex(this);
         nodes.forEach((node, i) => {
             this.parent.insertChild(node, index + i);
         });
     };
-    ViewPrototype.after = function(...nodes) {
+    ViewPrototype.after = function (...nodes) {
         if (!this.parent || !this.parent.insertChild) return;
         const index = this.parent.getChildIndex(this);
         nodes.forEach((node, i) => {
@@ -435,7 +441,7 @@ if (ViewPrototype) {
         });
     };
 
-    ViewPrototype.appendChild = function(child) {
+    ViewPrototype.appendChild = function (child) {
         if (child.nodeType === 11) {
             const children = [...child.childNodes];
             children.forEach(c => this.appendChild(c));
@@ -452,7 +458,7 @@ if (ViewPrototype) {
         }
         return child;
     };
-    ViewPrototype.insertBefore = function(child, ref) {
+    ViewPrototype.insertBefore = function (child, ref) {
         if (child.nodeType === 11) {
             const children = [...child.childNodes];
             children.forEach(c => this.insertBefore(c, ref));
@@ -475,15 +481,21 @@ if (ViewPrototype) {
         }
         return child;
     };
-    ViewPrototype.setAttribute = function(name, value) {
+    ViewPrototype.setAttribute = function (name, value) {
         this[name] = value;
         if (name.startsWith("on")) {
             const eventName = name.slice(2).toLowerCase();
             this.on(eventName, value);
         }
     };
-    ViewPrototype.getAttribute = function(name) {
+    ViewPrototype.getAttribute = function (name) {
         return this[name];
+    };
+    ViewPrototype.addEventListener = function (event, callback) {
+        this.on(event, callback);
+    };
+    ViewPrototype.removeEventListener = function (event, callback) {
+        this.off(event, callback);
     };
 }
 
@@ -526,7 +538,7 @@ export const SegmentedBarElement = ViewNode;
 export const SliderElement = ViewNode;
 export const StackLayoutElement = ViewNode;
 export const StyleElement = ViewNode;
-export const SvelteKeyedTemplate = class {};
+export const SvelteKeyedTemplate = class { };
 export const SvelteNativeDocument = ViewNode;
 export const SwitchElement = ViewNode;
 export const TabViewElement = ViewNode;
@@ -537,9 +549,9 @@ export const TextViewElement = ViewNode;
 export const TimePickerElement = ViewNode;
 export const WebViewElement = ViewNode;
 export const WrapLayoutElement = ViewNode;
-export const closeModal = () => {};
-export const goBack = () => {};
+export const closeModal = () => { };
+export const goBack = () => { };
 export const isModalOpened = () => false;
-export const logger = { debug:()=>{}, info:()=>{}, warn:()=>{}, error:()=>{} };
-export const navigate = () => {};
-export const showModal = () => new Promise(()=>{});
+export const logger = { debug: () => { }, info: () => { }, warn: () => { }, error: () => { } };
+export const navigate = () => { };
+export const showModal = () => new Promise(() => { });
