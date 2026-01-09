@@ -18,6 +18,7 @@ class ViewNode {
         this.parentNode = null;
         this.tagName = null;
         this.text = null;
+        this.isTemplate = false;
     }
     get nodeName() {
         const name = (this.nodeType === 3) ? "#text" :
@@ -81,11 +82,14 @@ class ViewNode {
             });
         }
 
-        if (this._content) {
-            copy._content = this._content.cloneNode(deep);
-        }
-
-        if (deep && this.childNodes) {
+        if (this.isTemplate) {
+            // Templates store their content in a fragment (_content)
+            this._content.childNodes.forEach(c => {
+                const childClone = c.cloneNode(true);
+                if (childClone) copy._content.appendChild(childClone);
+            });
+        } else if (deep && this.childNodes) {
+            // Standard child cloning
             this.childNodes.forEach(c => {
                 const childClone = c.cloneNode(true);
                 if (childClone) copy.appendChild(childClone);
@@ -100,57 +104,33 @@ class ViewNode {
 Object.defineProperties(ViewNode.prototype, {
     firstChild: {
         get() {
-            let res = null;
-            if (this.childNodes && this.childNodes.length > 0) res = this.childNodes[0];
-            else if (this.content) res = this.content;
-            else if (this.getChildrenCount && this.getChildrenCount() > 0) res = this.getChildAt(0);
-
-            console.log(`[ViewNode] Get firstChild of ${this.tagName} (Type: ${this.nodeType}). Result: ${res ? (res.tagName || res.nodeName) : "NULL"}`);
-            return res;
+            return (this.childNodes && this.childNodes.length > 0) ? this.childNodes[0] : null;
         },
         configurable: true
     },
     lastChild: {
         get() {
-            if (this.childNodes && this.childNodes.length > 0) return this.childNodes[this.childNodes.length - 1];
-            if (this.content) return this.content;
-            const count = this.getChildrenCount ? this.getChildrenCount() : 0;
-            if (count > 0) return this.getChildAt(count - 1);
-            return null;
+            return (this.childNodes && this.childNodes.length > 0) ? this.childNodes[this.childNodes.length - 1] : null;
         },
         configurable: true
     },
     nextSibling: {
         get() {
             const parent = this.parentNode || this.parent;
-            if (!parent) return null;
-            let res = null;
-            if (parent.childNodes) {
-                const index = parent.childNodes.indexOf(this);
-                return (index !== -1 && parent.childNodes[index + 1]) || null;
-            } else if (parent.getChildIndex && parent.getChildAt) {
-                const index = parent.getChildIndex(this);
-                if (index !== -1 && index < parent.getChildrenCount() - 1) {
-                    res = parent.getChildAt(index + 1);
-                }
-            }
-            return res;
+            if (!parent || !parent.childNodes) return null;
+            const nodes = parent.childNodes;
+            const index = nodes.indexOf(this);
+            return (index !== -1 && index < nodes.length - 1) ? nodes[index + 1] : null;
         },
         configurable: true
     },
     previousSibling: {
         get() {
             const parent = this.parentNode || this.parent;
-            if (!parent) return null;
-            if (parent.childNodes) {
-                const index = parent.childNodes.indexOf(this);
-                return parent.childNodes[index - 1] || null;
-            }
-            if (parent.getChildIndex && parent.getChildAt) {
-                const index = parent.getChildIndex(this);
-                if (index > 0) return parent.getChildAt(index - 1);
-            }
-            return null;
+            if (!parent || !parent.childNodes) return null;
+            const nodes = parent.childNodes;
+            const index = nodes.indexOf(this);
+            return (index > 0) ? nodes[index - 1] : null;
         },
         configurable: true
     },
@@ -283,6 +263,7 @@ function createElement(elementName) {
     const node = elementMap[normalized] ? elementMap[normalized].resolver() : new ViewNode(type);
     node.tagName = normalized;
     if (normalized === 'template') {
+        node.isTemplate = true;
         node._content = installGlobalShims().createDocumentFragment();
         node._content.childNodes = node.childNodes;
     }
@@ -455,29 +436,41 @@ if (ViewPrototype) {
         },
         firstChild: {
             get() {
-                if (this.childNodes?.[0]) return this.childNodes[0];
-                if (this.content) return this.content;
-                if (this.getChildrenCount && this.getChildrenCount() > 0) {
-                    return this.getChildAt(0);
+                const res = (this.childNodes && this.childNodes.length > 0) ? this.childNodes[0] : null;
+                if (!res && (this.tagName === 'page' || this.tagName === 'stacklayout')) {
+                    console.log(`[NAV-DEBUG] firstChild of ${this.tagName} is NULL! children: ${this.childNodes?.length}`);
                 }
-                return null;
+                return res;
+            },
+            configurable: true
+        },
+        lastChild: {
+            get() {
+                return (this.childNodes && this.childNodes.length > 0) ? this.childNodes[this.childNodes.length - 1] : null;
             },
             configurable: true
         },
         nextSibling: {
             get() {
-                const parent = this.parent || this.parentNode;
-                if (!parent) return null;
-
-                if (parent.childNodes) {
-                    const index = parent.childNodes.indexOf(this);
-                    if (index !== -1 && parent.childNodes[index + 1]) return parent.childNodes[index + 1];
+                const parent = this.parentNode || this.parent;
+                if (!parent || !parent.childNodes) return null;
+                const nodes = parent.childNodes;
+                const index = nodes.indexOf(this);
+                const res = (index !== -1 && index < nodes.length - 1) ? nodes[index + 1] : null;
+                if (!res && (this.tagName === 'actionbar' || this.nodeType === 8)) {
+                    console.log(`[NAV-DEBUG] nextSibling of ${this.tagName || this.nodeName} is NULL! parent: ${parent.tagName}, index: ${index}/${nodes.length}`);
                 }
-
-                if (!parent.getChildIndex || !parent.getChildAt) return null;
-                const index = parent.getChildIndex(this);
-                if (index === -1 || index >= parent.getChildrenCount() - 1) return null;
-                return parent.getChildAt(index + 1);
+                return res;
+            },
+            configurable: true
+        },
+        previousSibling: {
+            get() {
+                const parent = this.parentNode || this.parent;
+                if (!parent || !parent.childNodes) return null;
+                const nodes = parent.childNodes;
+                const index = nodes.indexOf(this);
+                return (index > 0) ? nodes[index - 1] : null;
             },
             configurable: true
         }
