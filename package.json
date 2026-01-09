@@ -26,6 +26,6 @@
   },
   "scripts": {
     "dev": "bun ./index.html --host=0.0.0.0 --console",
-    "build:android": "NS_PLATFORM=android bun bun.build.ts"
+    "android": "ns run android"
   }
 }
