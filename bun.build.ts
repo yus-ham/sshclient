@@ -42,6 +42,11 @@ const nsBunPlugin: BunPlugin = {
       let absoluteBase = "";
       if (target.startsWith(".") || path.isAbsolute(target)) {
         absoluteBase = path.resolve(baseDir, target);
+      } else if (target === "@nativescript-community/svelte-native") {
+        absoluteBase = path.resolve(process.cwd(), "deps/svelte-native");
+      } else if (target.startsWith("@nativescript-community/svelte-native/")) {
+        const subPath = target.replace("@nativescript-community/svelte-native/", "");
+        absoluteBase = path.resolve(process.cwd(), "deps/svelte-native", subPath);
       } else if (target.startsWith("@nativescript")) {
         absoluteBase = path.resolve(process.cwd(), "node_modules", target);
       } else {
