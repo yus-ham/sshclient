@@ -15,11 +15,52 @@ function normalizeElementName(elementName) {
 }
 
 class ViewNode {
-    constructor() {
-        this.nodeType = null;
+    constructor(nodeType = 1) {
+        this.nodeType = nodeType;
         this.childNodes = [];
         this.parentNode = null;
         this.tagName = null;
+        this.text = null;
+    }
+    get nodeName() { 
+        const name = (this.nodeType === 3) ? "#text" :
+                     (this.nodeType === 8) ? "#comment" :
+                     (this.nodeType === 11) ? "#document-fragment" :
+                     (this.tagName || "").toUpperCase();
+        console.log(`[ViewNode] nodeName: ${name} (type: ${this.nodeType})`);
+        return name;
+    }
+    get namespaceURI() { return "http://www.w3.org/1999/xhtml"; }
+    
+    // DOM compatibility for Svelte 5
+    get textContent() { return this.text; }
+    set textContent(v) { this.text = v; }
+    get data() { return this.text; }
+    set data(v) { this.text = v; }
+    get nodeValue() { return this.text; }
+    set nodeValue(v) { this.text = v; }
+    get parentElement() { return this.parentNode; }
+    get ownerDocument() { return globalRef.document; }
+
+    get content() { return this._content; }
+
+    setAttribute(name, value) { 
+        this[name] = value; 
+        if (name === "class") this.className = value;
+        if (name.startsWith("on")) {
+            const eventName = name.slice(2).toLowerCase();
+            if (this.addEventListener) {
+                this.addEventListener(eventName, value);
+            } else if (this.on) {
+                this.on(eventName, value);
+            }
+        }
+    }
+    getAttribute(name) { 
+        return this[name]; 
+    }
+    removeAttribute(name) {
+        delete this[name];
     }
 }
 
@@ -28,16 +69,19 @@ class ViewNode {
 Object.defineProperties(ViewNode.prototype, {
     firstChild: {
         get() { 
-            if (this.childNodes) return this.childNodes[0] || null;
-            if (this.content) return this.content;
-            if (this.getChildrenCount && this.getChildrenCount() > 0) return this.getChildAt(0);
-            return null;
+            let res = null;
+            if (this.childNodes && this.childNodes.length > 0) res = this.childNodes[0];
+            else if (this.content) res = this.content;
+            else if (this.getChildrenCount && this.getChildrenCount() > 0) res = this.getChildAt(0);
+            
+            console.log(`[ViewNode] Get firstChild of ${this.tagName} (Type: ${this.nodeType}). Result: ${res ? (res.tagName || res.nodeName) : "NULL"}`);
+            return res;
         },
         configurable: true
     },
     lastChild: {
         get() { 
-            if (this.childNodes) return this.childNodes[this.childNodes.length - 1] || null;
+            if (this.childNodes && this.childNodes.length > 0) return this.childNodes[this.childNodes.length - 1];
             if (this.content) return this.content;
             const count = this.getChildrenCount ? this.getChildrenCount() : 0;
             if (count > 0) return this.getChildAt(count - 1);
@@ -49,17 +93,17 @@ Object.defineProperties(ViewNode.prototype, {
         get() {
             const parent = this.parentNode || this.parent;
             if (!parent) return null;
+            let res = null;
             if (parent.childNodes) {
                 const index = parent.childNodes.indexOf(this);
-                return parent.childNodes[index + 1] || null;
-            }
-            if (parent.getChildIndex && parent.getChildAt) {
+                return (index !== -1 && parent.childNodes[index + 1]) || null;
+            } else if (parent.getChildIndex && parent.getChildAt) {
                 const index = parent.getChildIndex(this);
                 if (index !== -1 && index < parent.getChildrenCount() - 1) {
-                    return parent.getChildAt(index + 1);
+                    res = parent.getChildAt(index + 1);
                 }
             }
-            return null;
+            return res;
         },
         configurable: true
     },
@@ -82,32 +126,85 @@ Object.defineProperties(ViewNode.prototype, {
     parent: {
         get() { return this.parentNode; },
         configurable: true
-    },
-    content: {
-        get() {
-            if (this.tagName === 'template') {
-                if (!this._content) {
-                    this._content = installGlobalShims().createDocumentFragment();
-                }
-                return this._content;
-            }
-            return undefined;
-        },
-        configurable: true
     }
 });
 
 // Implementation of methods
+Object.defineProperties(ViewNode.prototype, {
+    innerHTML: {
+        set(html) {
+            console.log(`[ViewNode] set innerHTML on ${this.tagName}: ${html}`);
+            const target = this.tagName === 'template' ? this.content : this;
+            target.childNodes = [];
+            if (!html) return;
+            
+            // Match comments, tags, or text (preserving whitespace)
+            const tagRegex = /(<!--.*?-->)|(<([a-zA-Z0-9-]+)([^>]*?)>)|(<\/([a-zA-Z0-9-]+)>)|([^<]+)/gs;
+            let match;
+            let currentParent = target;
+            
+            while ((match = tagRegex.exec(html)) !== null) {
+                if (match[1]) { // Comment
+                    const commentText = match[1].slice(4, -3);
+                    currentParent.appendChild(installGlobalShims().createComment(commentText));
+                } else if (match[3]) { // Open tag
+                    const tagName = match[3].toLowerCase();
+                    const node = createElement(tagName);
+                    
+                    const attrStr = match[4];
+                    if (attrStr) {
+                        const attrRegex = /([a-zA-Z0-9-]+)="([^"]*)"/g;
+                        let attrMatch;
+                        while ((attrMatch = attrRegex.exec(attrStr)) !== null) {
+                            node.setAttribute(attrMatch[1], attrMatch[2]);
+                        }
+                    }
+                    
+                                    currentParent.appendChild(node);
+                                    const isSelfClosing = attrStr && attrStr.trim().endsWith('/');
+                                    const voidTags = ["image", "activityindicator", "progress", "slider", "switch"];
+                                    const isVoid = voidTags.includes(tagName) || isSelfClosing;
+                                    if (!isVoid) {
+                                        currentParent = node;
+                                    }
+                                } else if (match[6]) { // Close tag
+                                    const tagName = match[6].toLowerCase();
+                                    const voidTags = ["image", "activityindicator", "progress", "slider", "switch"];
+                                    if (!voidTags.includes(tagName)) {
+                                        currentParent = currentParent.parentNode || target;
+                                    }
+                                                                } else if (match[7]) { // Text (KEEP WHITESPACE for Svelte 5 walking)
+                                                                    currentParent.appendChild(installGlobalShims().createTextNode(match[7]));
+                                                                }
+                                                            }
+                                                        },
+                                                        configurable: true
+                                                    }
+                                                });
+
 Object.assign(ViewNode.prototype, {
-    set innerHTML(html) {
-        this.childNodes = [];
-    },
     appendChild(child) { 
+        console.log(`(${this.nodeType}|${this.tagName}).appendChild: (${child.nodeType}|${child.tagName || child.nodeName})`);
+        if (this.tagName === 'template') return this.content.appendChild(child);
+        if (child.nodeType === 11) {
+            const children = [...child.childNodes];
+            children.forEach(c => this.appendChild(c));
+            child.childNodes = [];
+            return child;
+        }
         this.childNodes.push(child); 
         child.parentNode = this; 
         return child; 
     },
     insertBefore(child, ref) { 
+        console.log(`(${this.nodeType}|${this.tagName}).insertBefore: (${child.nodeType}|${child.tagName || child.nodeName})`);
+        if (this.tagName === 'template') return this.content.insertBefore(child, ref);
+        if (child.nodeType === 11) {
+            const children = [...child.childNodes];
+            children.forEach(c => this.insertBefore(c, ref));
+            child.childNodes = [];
+            return child;
+        }
         const index = ref ? this.childNodes.indexOf(ref) : -1;
         if (index !== -1) {
             this.childNodes.splice(index, 0, child);
@@ -144,17 +241,22 @@ Object.assign(ViewNode.prototype, {
         }
     },
     cloneNode(deep) {
-        const copy = new ViewNode();
+        const copy = this.tagName ? createElement(this.tagName) : new ViewNode(this.nodeType);
         copy.nodeType = this.nodeType;
         copy.tagName = this.tagName;
         copy.text = this.text;
+        if (this._content) {
+            copy._content = this._content.cloneNode(deep);
+        }
         if (deep) {
-            this.childNodes.forEach(c => copy.appendChild(c.cloneNode(true)));
+            if (this.tagName === 'template') {
+                this.content.childNodes.forEach(c => copy.content.appendChild(c.cloneNode(true)));
+            } else {
+                this.childNodes.forEach(c => copy.appendChild(c.cloneNode(true)));
+            }
         }
         return copy;
-    },
-    setAttribute() {},
-    getAttribute() {}
+    }
 });
 
 function registerElement(elementName, resolver) {
@@ -163,34 +265,37 @@ function registerElement(elementName, resolver) {
 
 function createElement(elementName) {
     const normalized = normalizeElementName(elementName);
-    const node = elementMap[normalized] ? elementMap[normalized].resolver() : new ViewNode();
-    node.nodeType = 1;
+    console.log(`[createElement] Creating: ${normalized}`);
+    const type = (normalized === 'fragment') ? 11 : 1;
+    const node = elementMap[normalized] ? elementMap[normalized].resolver() : new ViewNode(type);
     node.tagName = normalized;
+    if (normalized === 'template') {
+        node._content = installGlobalShims().createDocumentFragment();
+        node._content.childNodes = node.childNodes;
+    }
     return node;
 }
 
 function installGlobalShims() {
     let snDoc = {
         createElement,
+        createElementNS: (ns, name) => createElement(name),
+        importNode: (node, deep) => node.cloneNode(deep),
         createTextNode: (t) => {
-            const node = new ViewNode();
-            node.nodeType = 3;
+            const node = new ViewNode(3);
             node.text = t;
             return node;
         },
         createComment: (t) => {
-            const node = new ViewNode();
-            node.nodeType = 8;
+            const node = new ViewNode(8);
             node.text = t;
             return node;
         },
         createDocumentFragment: () => {
-            const node = new ViewNode();
-            node.nodeType = 11;
-            return node;
+            return new ViewNode(11);
         },
-        body: new ViewNode(),
-        head: new ViewNode()
+        body: new ViewNode(1),
+        head: new ViewNode(1)
     };
 
     // ONLY provide global document for libraries that expect it, 
@@ -219,10 +324,10 @@ function installGlobalShims() {
 
     // Svelte 5 expects Node, Element, and Text to exist globally
     if (!globalRef.Node) globalRef.Node = ViewNode;
-    if (!globalRef.Element) globalRef.Element = ViewNode;
-    if (!globalRef.Text) globalRef.Text = ViewNode;
-    if (!globalRef.Comment) globalRef.Comment = ViewNode;
-    if (!globalRef.DocumentFragment) globalRef.DocumentFragment = ViewNode;
+    if (!globalRef.Element) globalRef.Element = class extends ViewNode { constructor() { super(1); } };
+    if (!globalRef.Text) globalRef.Text = class extends ViewNode { constructor() { super(3); } };
+    if (!globalRef.Comment) globalRef.Comment = class extends ViewNode { constructor() { super(8); } };
+    if (!globalRef.DocumentFragment) globalRef.DocumentFragment = class extends ViewNode { constructor() { super(11); } };
     if (!globalRef.Document) globalRef.Document = ViewNode;
 
     return snDoc;
@@ -248,12 +353,47 @@ initializeDom();
 const ViewPrototype = View.prototype;
 if (ViewPrototype) {
     Object.defineProperties(ViewPrototype, {
+        nodeType: {
+            get() { return 1; },
+            configurable: true
+        },
+        childNodes: {
+            get() {
+                if (!this._childNodes) this._childNodes = [];
+                return this._childNodes;
+            },
+            set(v) { this._childNodes = v; },
+            configurable: true
+        },
+        nodeName: {
+            get() { 
+                const name = (this.tagName || this.constructor.name || "").toUpperCase(); 
+                console.log(`[ViewPrototype] nodeName: ${name} (type: ${this.nodeType})`);
+                return name;
+            },
+            configurable: true
+        },
+        textContent: {
+            get() { return this.text; },
+            set(v) { this.text = v; },
+            configurable: true
+        },
+        nodeValue: {
+            get() { return this.text; },
+            set(v) { this.text = v; },
+            configurable: true
+        },
+        namespaceURI: {
+            get() { return "http://www.w3.org/1999/xhtml"; },
+            configurable: true
+        },
         parentNode: {
             get() { return this.parent; },
             configurable: true
         },
         firstChild: {
             get() {
+                if (this.childNodes?.[0]) return this.childNodes[0];
                 if (this.content) return this.content;
                 if (this.getChildrenCount && this.getChildrenCount() > 0) {
                     return this.getChildAt(0);
@@ -264,10 +404,18 @@ if (ViewPrototype) {
         },
         nextSibling: {
             get() {
-                if (!this.parent || !this.parent.getChildIndex) return null;
-                const index = this.parent.getChildIndex(this);
-                if (index === -1 || index >= this.parent.getChildrenCount() - 1) return null;
-                return this.parent.getChildAt(index + 1);
+                const parent = this.parent || this.parentNode;
+                if (!parent) return null;
+
+                if (parent.childNodes) {
+                    const index = parent.childNodes.indexOf(this);
+                    if (index !== -1 && parent.childNodes[index + 1]) return parent.childNodes[index + 1];
+                }
+
+                if (!parent.getChildIndex || !parent.getChildAt) return null;
+                const index = parent.getChildIndex(this);
+                if (index === -1 || index >= parent.getChildrenCount() - 1) return null;
+                return parent.getChildAt(index + 1);
             },
             configurable: true
         }
@@ -279,10 +427,63 @@ if (ViewPrototype) {
             this.parent.insertChild(node, index + i);
         });
     };
-    ViewPrototype.remove = function() {
-        if (this.parent && this.parent.removeChild) {
-            this.parent.removeChild(this);
+    ViewPrototype.after = function(...nodes) {
+        if (!this.parent || !this.parent.insertChild) return;
+        const index = this.parent.getChildIndex(this);
+        nodes.forEach((node, i) => {
+            this.parent.insertChild(node, index + i);
+        });
+    };
+
+    ViewPrototype.appendChild = function(child) {
+        if (child.nodeType === 11) {
+            const children = [...child.childNodes];
+            children.forEach(c => this.appendChild(c));
+            child.childNodes = [];
+            return child;
         }
+        this.childNodes.push(child);
+        if (this.addChild) {
+            this.addChild(child);
+            child.parentNode = this;
+        } else if ("content" in this) {
+            this.content = child;
+            child.parentNode = this;
+        }
+        return child;
+    };
+    ViewPrototype.insertBefore = function(child, ref) {
+        if (child.nodeType === 11) {
+            const children = [...child.childNodes];
+            children.forEach(c => this.insertBefore(c, ref));
+            child.childNodes = [];
+            return child;
+        }
+        const idx = ref ? this.childNodes.indexOf(ref) : -1;
+        if (idx !== -1) {
+            this.childNodes.splice(idx, 0, child);
+        } else {
+            this.childNodes.push(child);
+        }
+
+        if (this.insertChild && ref) {
+            const index = this.getChildIndex(ref);
+            this.insertChild(child, index);
+            child.parentNode = this;
+        } else {
+            this.appendChild(child);
+        }
+        return child;
+    };
+    ViewPrototype.setAttribute = function(name, value) {
+        this[name] = value;
+        if (name.startsWith("on")) {
+            const eventName = name.slice(2).toLowerCase();
+            this.on(eventName, value);
+        }
+    };
+    ViewPrototype.getAttribute = function(name) {
+        return this[name];
     };
 }
 

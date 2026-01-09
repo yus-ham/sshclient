@@ -1,7 +1,7 @@
 import { NativeScriptConfig } from '@nativescript/core';
 
 export default {
-  id: 'org.nativescript.myapp2',
+  id: 'id.yusham.sshclient',
   appPath: 'app',
   appResourcesPath: 'App_Resources',
   android: {
