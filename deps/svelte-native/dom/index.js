@@ -561,6 +561,13 @@ if (ViewPrototype) {
     ViewPrototype.removeEventListener = function (event, callback) {
         this.off(event, callback);
     };
+    ViewPrototype.remove = function () {
+        if (this.parentNode) {
+            this.parentNode.removeChild(this);
+        } else if (this.parent) {
+            this.parent.removeChild(this);
+        }
+    };
     ViewPrototype.cloneNode = function (deep) {
         console.log(`[ViewPrototype] cloneNode: ${this.tagName || this.constructor.name}, deep: ${deep}, children: ${this.childNodes?.length || 0}`);
         const copy = this.tagName ? createElement(this.tagName) : createElement(this.constructor.name.toLowerCase());
