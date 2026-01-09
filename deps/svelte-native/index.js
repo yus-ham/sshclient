@@ -56,7 +56,14 @@ function svelteNativeNoFrame(rootElement, data) {
             }
             
             const result = root ? (root.nativeElement || root) : frag;
-            console.log("[SvelteNative] buildElement: returning", result ? (result.constructor.name || result.tagName) : "null");
+            console.log("[SvelteNative] buildElement: returning detail", {
+                type: typeof result,
+                constructor: result?.constructor?.name,
+                tagName: result?.tagName,
+                nodeType: result?.nodeType,
+                hasSetup: typeof result?._setupAsRootView === 'function',
+                keys: result ? Object.keys(result).slice(0, 15) : []
+            });
             return result;
         };
         //wait for launch before returning

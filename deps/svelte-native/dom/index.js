@@ -1,5 +1,5 @@
-import { View } from '@nativescript/core';
-import { _rootModalViews } from '@nativescript/core/ui/core/view';
+import * as core from '@nativescript/core';
+const { View } = core;
 
 const globalRef = typeof global !== 'undefined' ? global : window;
 const isBrowser = typeof window !== 'undefined';
@@ -342,8 +342,56 @@ function installGlobalShims() {
 
 // Minimal registration for core elements so svelte-native doesn't crash on init
 function registerNativeElements() {
-    const tags = ['page', 'actionbar', 'stacklayout', 'gridlayout', 'label', 'button', 'frame', 'tabview', 'listview'];
-    tags.forEach(tag => registerElement(tag, () => new ViewNode()));
+    const tags = {
+        'page': 'Page',
+        'actionbar': 'ActionBar',
+        'stacklayout': 'StackLayout',
+        'gridlayout': 'GridLayout',
+        'wraplayout': 'WrapLayout',
+        'absolutelayout': 'AbsoluteLayout',
+        'docklayout': 'DockLayout',
+        'flexboxlayout': 'FlexboxLayout',
+        'label': 'Label',
+        'button': 'Button',
+        'frame': 'Frame',
+        'tabview': 'TabView',
+        'tabviewitem': 'TabViewItem',
+        'listview': 'ListView',
+        'textfield': 'TextField',
+        'textview': 'TextView',
+        'image': 'Image',
+        'scrollview': 'ScrollView',
+        'activityindicator': 'ActivityIndicator',
+        'placeholder': 'Placeholder',
+        'switch': 'Switch',
+        'slider': 'Slider',
+        'progress': 'Progress',
+        'datepicker': 'DatePicker',
+        'timepicker': 'TimePicker',
+        'listpicker': 'ListPicker',
+        'segmentedbar': 'SegmentedBar',
+        'segmentedbaritem': 'SegmentedBarItem',
+        'webview': 'WebView',
+        'htmlview': 'HtmlView',
+        'formattedstring': 'FormattedString',
+        'span': 'Span'
+    };
+
+    Object.keys(tags).forEach(tag => {
+        const className = tags[tag];
+        const cls = core[className];
+        if (cls) {
+            registerElement(tag, () => {
+                const node = new cls();
+                node.nodeType = 1;
+                node.tagName = tag;
+                return node;
+            });
+        } else {
+            console.warn(`[registerNativeElements] Could not find class ${className} for tag ${tag}`);
+            registerElement(tag, () => new ViewNode());
+        }
+    });
 }
 
 let initializedDom = false;
@@ -450,12 +498,16 @@ if (ViewPrototype) {
             return child;
         }
         this.childNodes.push(child);
-        if (this.addChild) {
-            this.addChild(child);
-            child.parentNode = this;
-        } else if ("content" in this) {
-            this.content = child;
-            child.parentNode = this;
+        if (child instanceof View) {
+            if (this.addChild) {
+                this.addChild(child);
+                child.parentNode = this;
+            } else if ("content" in this) {
+                this.content = child;
+                child.parentNode = this;
+            }
+        } else {
+            console.log(`[SvelteNative] bypass append: node type ${child.nodeType} (${child.tagName || child.nodeName}) is not a View, skipping native append.`);
         }
         return child;
     };
@@ -473,12 +525,14 @@ if (ViewPrototype) {
             this.childNodes.push(child);
         }
 
-        if (this.insertChild && ref) {
-            const index = this.getChildIndex(ref);
-            this.insertChild(child, index);
-            child.parentNode = this;
-        } else {
-            this.appendChild(child);
+        if (child instanceof View) {
+            if (this.insertChild && ref) {
+                const index = this.getChildIndex(ref);
+                this.insertChild(child, index);
+                child.parentNode = this;
+            } else {
+                this.appendChild(child);
+            }
         }
         return child;
     };
