@@ -38,46 +38,18 @@ function svelteNativeNoFrame(rootElement, data) {
         let elementInstance;
         const buildElement = () => {
             let frag = createElement('fragment', window.document);
-            console.log("[SvelteNative] buildElement: frag created", frag);
             elementInstance = mount(rootElement, {
                 target: frag,
                 props: data || {}
             });
-            
-            console.log("[SvelteNative] buildElement: mount done. childNodes count:", frag.childNodes.length);
-            
-            // Find first valid UI element (skip comments and empty text)
+
             let root = frag.firstChild;
-            console.log("[SvelteNative] buildElement: firstChild is", root ? (root.constructor.name || root.tagName) : "null");
 
             while (root && (root.nodeType === 8 || (root.nodeType === 3 && !root.text?.trim()))) {
-                 console.log("[SvelteNative] skipping node", root.nodeType);
-                 root = root.nextSibling;
+                root = root.nextSibling;
             }
             
             const result = root ? (root.nativeElement || root) : frag;
-            if (result) {
-                let sampleText = "NONE";
-                let content = result.content;
-                if (content) {
-                    if (content.text) sampleText = content.text;
-                    else if (content.getChildrenCount && content.getChildrenCount() > 0) {
-                        let first = content.getChildAt(0);
-                        sampleText = first.text || `Tag: ${first.tagName || first.constructor.name}`;
-                    }
-                }
-                console.log("[SvelteNative] DEEP CONTENT CHECK:", {
-                    contentTag: content?.tagName || content?.constructor.name,
-                    sampleText: sampleText,
-                    visualChildren: content?.getChildrenCount ? content.getChildrenCount() : 0
-                });
-            }
-            console.log("[SvelteNative] buildElement: FINAL RESULT CHECK", {
-                constructor: result?.constructor?.name,
-                tag: result?.tagName,
-                hasContent: !!result?.content,
-                actionBar: !!result?.actionBar
-            });
             return result;
         };
         //wait for launch before returning

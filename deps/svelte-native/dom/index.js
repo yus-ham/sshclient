@@ -1,8 +1,8 @@
 import * as core from '@nativescript/core';
-const { View } = core;
+const { View: NSCoreView } = core;
 
 const globalRef = typeof global !== 'undefined' ? global : window;
-const isBrowser = typeof window !== 'undefined';
+
 
 // Mock/Singleton for elements
 const elementMap = globalRef.__SVELTE_NATIVE_ELEMENT_MAP__ || (globalRef.__SVELTE_NATIVE_ELEMENT_MAP__ = {});
@@ -11,7 +11,7 @@ function normalizeElementName(elementName) {
     return `${elementName.toLowerCase()}`;
 }
 
-class ViewNode {
+class SvelteView {
     constructor(nodeType = 1) {
         this.nodeType = nodeType;
         this.childNodes = [];
@@ -21,12 +21,10 @@ class ViewNode {
         this.isTemplate = false;
     }
     get nodeName() {
-        const name = (this.nodeType === 3) ? "#text" :
+        return (this.nodeType === 3) ? "#text" :
             (this.nodeType === 8) ? "#comment" :
                 (this.nodeType === 11) ? "#document-fragment" :
                     (this.tagName || "").toUpperCase();
-        console.log(`[ViewNode] nodeName: ${name} (type: ${this.nodeType})`);
-        return name;
     }
     get namespaceURI() { return "http://www.w3.org/1999/xhtml"; }
 
@@ -70,7 +68,7 @@ class ViewNode {
         }
     }
     cloneNode(deep) {
-        const copy = this.tagName ? createElement(this.tagName) : new ViewNode(this.nodeType);
+        const copy = this.tagName ? createElement(this.tagName) : new SvelteView(this.nodeType);
         copy.nodeType = this.nodeType;
         copy.tagName = this.tagName;
         copy.text = this.text;
@@ -101,10 +99,15 @@ class ViewNode {
 
 // Svelte 5 retrieves getters from the prototype during init_operations.
 // We must define them explicitly so Object.getOwnPropertyDescriptor works.
-Object.defineProperties(ViewNode.prototype, {
+Object.defineProperties(SvelteView.prototype, {
     firstChild: {
         get() {
-            return (this.childNodes && this.childNodes.length > 0) ? this.childNodes[0] : null;
+            if (!this.tagName && (!this.constructor || !this.constructor.name)) {
+                console.log(`[WALK-ERROR-NODE] firstChild dipanggil pada objek misterius! Keys:`, Object.keys(this));
+            }
+            const res = (this.childNodes && this.childNodes.length > 0) ? this.childNodes[0] : null;
+            console.log(`[WALK] firstChild of ${this.tagName || (this.constructor && this.constructor.name) || 'UNDEFINED-NODE'} -> ${res ? (res.tagName || res.nodeName) : 'NULL'}`);
+            return res;
         },
         configurable: true
     },
@@ -120,17 +123,9 @@ Object.defineProperties(ViewNode.prototype, {
             if (!parent || !parent.childNodes) return null;
             const nodes = parent.childNodes;
             const index = nodes.indexOf(this);
-            return (index !== -1 && index < nodes.length - 1) ? nodes[index + 1] : null;
-        },
-        configurable: true
-    },
-    previousSibling: {
-        get() {
-            const parent = this.parentNode || this.parent;
-            if (!parent || !parent.childNodes) return null;
-            const nodes = parent.childNodes;
-            const index = nodes.indexOf(this);
-            return (index > 0) ? nodes[index - 1] : null;
+            const res = (index !== -1 && index < nodes.length - 1) ? nodes[index + 1] : null;
+            console.log(`[WALK] nextSibling of ${this.tagName || this.nodeName} -> ${res ? (res.tagName || res.nodeName) : 'NULL'}`);
+            return res;
         },
         configurable: true
     },
@@ -141,10 +136,9 @@ Object.defineProperties(ViewNode.prototype, {
 });
 
 // Implementation of methods
-Object.defineProperties(ViewNode.prototype, {
+Object.defineProperties(SvelteView.prototype, {
     innerHTML: {
         set(html) {
-            console.log(`[ViewNode] set innerHTML on ${this.tagName}: ${html}`);
             const target = this.tagName === 'template' ? this.content : this;
             target.childNodes = [];
             if (!html) return;
@@ -193,9 +187,8 @@ Object.defineProperties(ViewNode.prototype, {
     }
 });
 
-Object.assign(ViewNode.prototype, {
+Object.assign(SvelteView.prototype, {
     appendChild(child) {
-        console.log(`(${this.nodeType}|${this.tagName}).appendChild: (${child.nodeType}|${child.tagName || child.nodeName})`);
         if (this.tagName === 'template') return this.content.appendChild(child);
         if (child.nodeType === 11) {
             const children = [...child.childNodes];
@@ -208,7 +201,6 @@ Object.assign(ViewNode.prototype, {
         return child;
     },
     insertBefore(child, ref) {
-        console.log(`(${this.nodeType}|${this.tagName}).insertBefore: (${child.nodeType}|${child.tagName || child.nodeName})`);
         if (this.tagName === 'template') return this.content.insertBefore(child, ref);
         if (child.nodeType === 11) {
             const children = [...child.childNodes];
@@ -260,7 +252,7 @@ function registerElement(elementName, resolver) {
 function createElement(elementName) {
     const normalized = normalizeElementName(elementName);
     const type = (normalized === 'fragment') ? 11 : 1;
-    const node = elementMap[normalized] ? elementMap[normalized].resolver() : new ViewNode(type);
+    const node = elementMap[normalized] ? elementMap[normalized].resolver() : new SvelteView(type);
     node.tagName = normalized;
     if (normalized === 'template') {
         node.isTemplate = true;
@@ -276,20 +268,20 @@ function installGlobalShims() {
         createElementNS: (ns, name) => createElement(name),
         importNode: (node, deep) => node.cloneNode(deep),
         createTextNode: (t) => {
-            const node = new ViewNode(3);
+            const node = new SvelteView(3);
             node.text = t;
             return node;
         },
         createComment: (t) => {
-            const node = new ViewNode(8);
+            const node = new SvelteView(8);
             node.text = t;
             return node;
         },
         createDocumentFragment: () => {
-            return new ViewNode(11);
+            return new SvelteView(11);
         },
-        body: new ViewNode(1),
-        head: new ViewNode(1)
+        body: new SvelteView(1),
+        head: new SvelteView(1)
     };
 
     // ONLY provide global document for libraries that expect it, 
@@ -317,13 +309,13 @@ function installGlobalShims() {
     }
 
     // Svelte 5 expects Node, Element, and Text to exist globally
-    if (!globalRef.Node) globalRef.Node = ViewNode;
-    if (!globalRef.Element) globalRef.Element = class extends ViewNode { constructor() { super(1); } };
-    if (!globalRef.Text) globalRef.Text = class extends ViewNode { constructor() { super(3); } };
-    if (!globalRef.Comment) globalRef.Comment = class extends ViewNode { constructor() { super(8); } };
-    if (!globalRef.DocumentFragment) globalRef.DocumentFragment = class extends ViewNode { constructor() { super(11); } };
-    if (!globalRef.Document) globalRef.Document = ViewNode;
-    if (!globalRef.HTMLMediaElement) globalRef.HTMLMediaElement = class extends ViewNode { constructor() { super(1); } };
+    if (!globalRef.Node) globalRef.Node = SvelteView;
+    if (!globalRef.Element) globalRef.Element = class extends SvelteView { constructor() { super(1); } };
+    if (!globalRef.Text) globalRef.Text = class extends SvelteView { constructor() { super(3); } };
+    if (!globalRef.Comment) globalRef.Comment = class extends SvelteView { constructor() { super(8); } };
+    if (!globalRef.DocumentFragment) globalRef.DocumentFragment = class extends SvelteView { constructor() { super(11); } };
+    if (!globalRef.Document) globalRef.Document = SvelteView;
+    if (!globalRef.HTMLMediaElement) globalRef.HTMLMediaElement = class extends SvelteView { constructor() { super(1); } };
 
     return snDoc;
 }
@@ -377,7 +369,7 @@ function registerNativeElements() {
             });
         } else {
             console.warn(`[registerNativeElements] Could not find class ${className} for tag ${tag}`);
-            registerElement(tag, () => new ViewNode());
+            registerElement(tag, () => new SvelteView());
         }
     });
 }
@@ -392,8 +384,8 @@ function initializeDom() {
 
 initializeDom();
 
-// Patch NativeScript View prototype to be Svelte 5 compatible
-const ViewPrototype = View.prototype;
+// Patch NativeScript NSCoreView prototype to be Svelte 5 compatible
+const ViewPrototype = NSCoreView.prototype;
 if (ViewPrototype) {
     Object.defineProperties(ViewPrototype, {
         nodeType: {
@@ -410,9 +402,7 @@ if (ViewPrototype) {
         },
         nodeName: {
             get() {
-                const name = (this.tagName || this.constructor.name || "").toUpperCase();
-                console.log(`[ViewPrototype] nodeName: ${name} (type: ${this.nodeType})`);
-                return name;
+                return (this.tagName || this.constructor.name || "").toUpperCase();
             },
             configurable: true
         },
@@ -436,10 +426,18 @@ if (ViewPrototype) {
         },
         firstChild: {
             get() {
-                const res = (this.childNodes && this.childNodes.length > 0) ? this.childNodes[0] : null;
-                if (!res && (this.tagName === 'page' || this.tagName === 'stacklayout')) {
-                    console.log(`[NAV-DEBUG] firstChild of ${this.tagName} is NULL! children: ${this.childNodes?.length}`);
+                if (this.constructor && (this.constructor.name === 'NativeScriptGlobalObject' || this.constructor.name === 'NativeScriptGlobalObjectImpl')) {
+                    console.log(`[BONGKAR-GLOBAL] Identitas:`, {
+                        constructor: this.constructor.name,
+                        nodeType: this.nodeType,
+                        tagName: this.tagName,
+                        isWindow: (typeof window !== 'undefined' && this === window),
+                        isGlobal: (typeof global !== 'undefined' && this === global),
+                        keys: Object.keys(this).slice(0, 30)
+                    });
                 }
+                const res = (this.childNodes && this.childNodes.length > 0) ? this.childNodes[0] : null;
+                console.log(`[WALK] firstChild of ${this.tagName || (this.constructor && this.constructor.name) || 'UNDEFINED'} -> ${res ? (res.tagName || res.nodeName) : 'NULL'}`);
                 return res;
             },
             configurable: true
@@ -457,9 +455,7 @@ if (ViewPrototype) {
                 const nodes = parent.childNodes;
                 const index = nodes.indexOf(this);
                 const res = (index !== -1 && index < nodes.length - 1) ? nodes[index + 1] : null;
-                if (!res && (this.tagName === 'actionbar' || this.nodeType === 8)) {
-                    console.log(`[NAV-DEBUG] nextSibling of ${this.tagName || this.nodeName} is NULL! parent: ${parent.tagName}, index: ${index}/${nodes.length}`);
-                }
+                console.log(`[WALK] nextSibling of ${this.tagName || this.nodeName || this.constructor.name} -> ${res ? (res.tagName || res.nodeName) : 'NULL'}`);
                 return res;
             },
             configurable: true
@@ -499,7 +495,7 @@ if (ViewPrototype) {
         }
         this.childNodes.push(child);
         child.parentNode = this;
-        if (child instanceof View) {
+        if (child instanceof NSCoreView) {
             if (this.addChild) {
                 this.addChild(child);
             } else {
@@ -507,16 +503,9 @@ if (ViewPrototype) {
                 if (isActionBar && ("actionBar" in this)) {
                     this.actionBar = child;
                 } else if ("content" in this) {
-                    if (this.content && this.content !== child) {
-                        console.warn(`[SvelteNative] content overwrite on ${this.tagName || this.constructor.name}: replacing ${this.content.tagName || this.content.constructor.name} with ${child.tagName || child.constructor.name}`);
-                    }
                     this.content = child;
-                } else {
-                    console.warn(`[SvelteNative] orphan View: parent ${this.tagName || this.constructor.name} has no addChild or content property to hold ${child.tagName || child.constructor.name}`);
                 }
             }
-        } else {
-            console.log(`[SvelteNative] bypass append: node type ${child.nodeType} (${child.tagName || child.nodeName}) is not a View, skipping native append.`);
         }
         return child;
     };
@@ -536,12 +525,12 @@ if (ViewPrototype) {
         }
         child.parentNode = this;
 
-        if (child instanceof View) {
-            // Calculate actual native index by counting only View instances
+        if (child instanceof NSCoreView) {
+            // Calculate actual native index by counting only NSCoreView instances
             let nativeIndex = 0;
             for (const node of this.childNodes) {
                 if (node === child) break;
-                if (node instanceof View) nativeIndex++;
+                if (node instanceof NSCoreView) nativeIndex++;
             }
 
             if (this.insertChild && ref) {
@@ -583,17 +572,11 @@ if (ViewPrototype) {
 
     const originalAddChild = ViewPrototype.addChild;
     ViewPrototype.addChild = function (child) {
-        if (this.tagName === 'stacklayout' || this.constructor.name === 'StackLayout') {
-            console.log(`[NATIVE-ADD] to ${this.tagName || this.constructor.name}: ${child.tagName || child.constructor.name}`);
-        }
         if (originalAddChild) return originalAddChild.call(this, child);
     };
 
     const originalInsertChild = ViewPrototype.insertChild;
     ViewPrototype.insertChild = function (child, index) {
-        if (this.tagName === 'stacklayout' || this.constructor.name === 'StackLayout') {
-            console.log(`[NATIVE-INSERT] to ${this.tagName || this.constructor.name}: ${child.tagName || child.constructor.name} at ${index}`);
-        }
         if (originalInsertChild) return originalInsertChild.call(this, child, index);
     };
 
@@ -626,54 +609,54 @@ if (ViewPrototype) {
 
 export { initializeDom, createElement, installGlobalShims };
 // Dummy exports for compatibility
-export const AbsoluteLayoutElement = ViewNode;
-export const ActionBarElement = ViewNode;
-export const ActivityIndicatorElement = ViewNode;
-export const ButtonElement = ViewNode;
-export const CommentNode = ViewNode;
-export const ContentViewElement = ViewNode;
-export const DatePickerElement = ViewNode;
-export const DockLayoutElement = ViewNode;
-export const DocumentNode = ViewNode;
+export const AbsoluteLayoutElement = SvelteView;
+export const ActionBarElement = SvelteView;
+export const ActivityIndicatorElement = SvelteView;
+export const ButtonElement = SvelteView;
+export const CommentNode = SvelteView;
+export const ContentViewElement = SvelteView;
+export const DatePickerElement = SvelteView;
+export const DockLayoutElement = SvelteView;
+export const DocumentNode = SvelteView;
 export const DomTraceCategory = "SvelteNativeDom";
-export const ElementNode = ViewNode;
-export const FlexboxLayoutElement = ViewNode;
-export const FormattedStringElement = ViewNode;
-export const FrameElement = ViewNode;
-export const GridLayoutElement = ViewNode;
-export const HeadElement = ViewNode;
-export const HtmlViewElement = ViewNode;
-export const ImageElement = ViewNode;
-export const LabelElement = ViewNode;
-export const ListPickerElement = ViewNode;
-export const ListViewElement = ViewNode;
+export const ElementNode = SvelteView;
+export const FlexboxLayoutElement = SvelteView;
+export const FormattedStringElement = SvelteView;
+export const FrameElement = SvelteView;
+export const GridLayoutElement = SvelteView;
+export const HeadElement = SvelteView;
+export const HtmlViewElement = SvelteView;
+export const ImageElement = SvelteView;
+export const LabelElement = SvelteView;
+export const ListPickerElement = SvelteView;
+export const ListViewElement = SvelteView;
 export const LogLevel = {};
-export const NativeElementNode = ViewNode;
+export const NativeElementNode = SvelteView;
 export const NativeElementPropType = {};
-export const NativeViewElementNode = ViewNode;
-export const PageElement = ViewNode;
-export const PlaceholderElement = ViewNode;
-export const ProgressElement = ViewNode;
-export const PropertyNode = ViewNode;
-export const ProxyViewContainerElement = ViewNode;
-export const RootLayoutElement = ViewNode;
-export const ScrollViewElement = ViewNode;
-export const SearchBarElement = ViewNode;
-export const SegmentedBarElement = ViewNode;
-export const SliderElement = ViewNode;
-export const StackLayoutElement = ViewNode;
-export const StyleElement = ViewNode;
+export const NativeViewElementNode = SvelteView;
+export const PageElement = SvelteView;
+export const PlaceholderElement = SvelteView;
+export const ProgressElement = SvelteView;
+export const PropertyNode = SvelteView;
+export const ProxyViewContainerElement = SvelteView;
+export const RootLayoutElement = SvelteView;
+export const ScrollViewElement = SvelteView;
+export const SearchBarElement = SvelteView;
+export const SegmentedBarElement = SvelteView;
+export const SliderElement = SvelteView;
+export const StackLayoutElement = SvelteView;
+export const StyleElement = SvelteView;
 export const SvelteKeyedTemplate = class { };
-export const SvelteNativeDocument = ViewNode;
-export const SwitchElement = ViewNode;
-export const TabViewElement = ViewNode;
-export const TemplateElement = ViewNode;
-export const TextFieldElement = ViewNode;
-export const TextNode = ViewNode;
-export const TextViewElement = ViewNode;
-export const TimePickerElement = ViewNode;
-export const WebViewElement = ViewNode;
-export const WrapLayoutElement = ViewNode;
+export const SvelteNativeDocument = SvelteView;
+export const SwitchElement = SvelteView;
+export const TabViewElement = SvelteView;
+export const TemplateElement = SvelteView;
+export const TextFieldElement = SvelteView;
+export const TextNode = SvelteView;
+export const TextViewElement = SvelteView;
+export const TimePickerElement = SvelteView;
+export const WebViewElement = SvelteView;
+export const WrapLayoutElement = SvelteView;
 export const closeModal = () => { };
 export const goBack = () => { };
 export const isModalOpened = () => false;
