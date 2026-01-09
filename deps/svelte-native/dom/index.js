@@ -335,6 +335,7 @@ function installGlobalShims() {
     if (!globalRef.Comment) globalRef.Comment = class extends ViewNode { constructor() { super(8); } };
     if (!globalRef.DocumentFragment) globalRef.DocumentFragment = class extends ViewNode { constructor() { super(11); } };
     if (!globalRef.Document) globalRef.Document = ViewNode;
+    if (!globalRef.HTMLMediaElement) globalRef.HTMLMediaElement = class extends ViewNode { constructor() { super(1); } };
 
     return snDoc;
 }
