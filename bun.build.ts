@@ -8,7 +8,7 @@ const nativeClassTransformer = require("@nativescript/webpack/dist/transformers/
 
 const platform = process.env.NS_PLATFORM || "android";
 const isProd = process.env.NODE_ENV === "production";
-const outDir = `./app`;
+const outDir = `./dist`;
 
 console.log(`🚀 NativeScript-Bun-Hybrid Engine (${platform})`);
 
@@ -92,7 +92,7 @@ const nsBunPlugin: BunPlugin = {
 const result = await bunBuild({
   entrypoints: ["./app/app.ts"],
   outdir: outDir,
-  naming: "bundle.[ext]",
+  naming: "bun-bundle.[ext]",
   plugins: [
     nsBunPlugin, 
     SveltePlugin({
@@ -107,7 +107,7 @@ const result = await bunBuild({
   target: "browser",
   minify: false,
   splitting: false,
-  sourcemap: "none",
+  sourcemap: false,
   define: {
     "global.__ANDROID__": platform === "android" ? "true" : "false",
     "global.__IOS__": platform === "ios" ? "true" : "false",

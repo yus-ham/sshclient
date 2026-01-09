@@ -1,6 +1,5 @@
 const webpack = require('@nativescript/webpack');
 const { spawnSync } = require('child_process');
-const path = require('path');
 
 module.exports = (env) => {
     webpack.init(env);
@@ -17,10 +16,10 @@ module.exports = (env) => {
 
     webpack.chainWebpack(config => {
         config.resolve.alias.delete('svelte$');
-        config.entry('bundle').clear().add('./app/bundle.js');
-        
+        config.entry('bundle').clear().add('./dist/bun-bundle.js');
+        config.devtool(false)
         // MATIKAN SEMUA OPTIMASI WEBPACK UNTUK DEBUGGING
-        config.optimization.minimize(false);
+        // config.optimization.minimize(true);
     });
 
     return webpack.resolveConfig();
