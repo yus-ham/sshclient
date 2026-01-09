@@ -68,6 +68,19 @@ class ViewNode {
             this._listeners[event] = this._listeners[event].filter(l => l !== callback);
         }
     }
+    cloneNode(deep) {
+        const copy = this.tagName ? createElement(this.tagName) : new ViewNode(this.nodeType);
+        copy.nodeType = this.nodeType;
+        copy.tagName = this.tagName;
+        copy.text = this.text;
+        if (this._content) {
+            copy._content = this._content.cloneNode(deep);
+        }
+        if (deep) {
+            this.childNodes.forEach(c => copy.appendChild(c.cloneNode(true)));
+        }
+        return copy;
+    }
 }
 
 // Svelte 5 retrieves getters from the prototype during init_operations.
@@ -245,23 +258,6 @@ Object.assign(ViewNode.prototype, {
         for (const node of nodes) {
             this.parentNode.insertBefore(node, next);
         }
-    },
-    cloneNode(deep) {
-        const copy = this.tagName ? createElement(this.tagName) : new ViewNode(this.nodeType);
-        copy.nodeType = this.nodeType;
-        copy.tagName = this.tagName;
-        copy.text = this.text;
-        if (this._content) {
-            copy._content = this._content.cloneNode(deep);
-        }
-        if (deep) {
-            if (this.tagName === 'template') {
-                this.content.childNodes.forEach(c => copy.content.appendChild(c.cloneNode(true)));
-            } else {
-                this.childNodes.forEach(c => copy.appendChild(c.cloneNode(true)));
-            }
-        }
-        return copy;
     }
 });
 
@@ -498,13 +494,12 @@ if (ViewPrototype) {
             return child;
         }
         this.childNodes.push(child);
+        child.parentNode = this;
         if (child instanceof View) {
             if (this.addChild) {
                 this.addChild(child);
-                child.parentNode = this;
             } else if ("content" in this) {
                 this.content = child;
-                child.parentNode = this;
             }
         } else {
             console.log(`[SvelteNative] bypass append: node type ${child.nodeType} (${child.tagName || child.nodeName}) is not a View, skipping native append.`);
@@ -524,12 +519,12 @@ if (ViewPrototype) {
         } else {
             this.childNodes.push(child);
         }
+        child.parentNode = this;
 
         if (child instanceof View) {
             if (this.insertChild && ref) {
                 const index = this.getChildIndex(ref);
                 this.insertChild(child, index);
-                child.parentNode = this;
             } else {
                 this.appendChild(child);
             }
@@ -551,6 +546,15 @@ if (ViewPrototype) {
     };
     ViewPrototype.removeEventListener = function (event, callback) {
         this.off(event, callback);
+    };
+    ViewPrototype.cloneNode = function (deep) {
+        console.log(`[ViewPrototype] cloneNode: ${this.tagName || this.constructor.name}, deep: ${deep}, children: ${this.childNodes?.length || 0}`);
+        const copy = this.tagName ? createElement(this.tagName) : createElement(this.constructor.name.toLowerCase());
+        copy.nodeType = this.nodeType;
+        if (deep) {
+            this.childNodes.forEach(c => copy.appendChild(c.cloneNode(true)));
+        }
+        return copy;
     };
 }
 
