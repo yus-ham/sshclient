@@ -40,19 +40,25 @@ NativeScript relies heavily on Webpack for platform-specific build steps (Androi
 ```bash
 bun run android
 ```
-This runs the custom `compile.config.js` pipeline which triggers Bun build + NativeScript run.
 
-**2. Web Preview (Browser)**
+**2. iOS (Device/Emulator)**
+```bash
+bun run ios
+```
+
+**3. Web Preview (Browser)**
 ```bash
 bun run dev
 ```
 Opens a web server at `http://localhost:3000` to preview the UI logic without an emulator.
 
+This runs the custom build pipeline which triggers Bun build + NativeScript run.
+
 ## 📂 Project Structure
 
 *   `bun.build.ts`: The Bun build configuration.
 *   `webpack.config.js`: The "thin" Webpack wrapper that consumes Bun's output.
-*   `deps/`: Patched versions of `svelte`, `svelte-native`, and mocks.
+*   `deps/`: Patched versions of `svelte-native` and mocks.
 *   `app/`: Source code (Svelte 5 + TS).
 
 ---
