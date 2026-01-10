@@ -16,16 +16,19 @@ export const createRequire = () => (id) => {
     return fatObj;
 };
 
-export const ApplicationSettings = {
-    hasKey: (key) => false,
-    getString: (key, defaultValue) => defaultValue,
-    setString: (key, value) => {},
-    remove: (key) => {},
-    getNumber: (k, d) => d,
-    setNumber: (k, v) => {},
-    getBoolean: (k, d) => d,
-    setBoolean: (k, v) => {}
-};
+export const ApplicationSettings = (() => {
+    const s = (typeof window !== 'undefined' && window.localStorage) || { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+    return {
+        hasKey: (k) => s.getItem(k) !== null,
+        getString: (k, d) => s.getItem(k) ?? d,
+        setString: s.setItem.bind(s),
+        remove: s.removeItem.bind(s),
+        getNumber: (k, d) => { const v = s.getItem(k); return v !== null ? +v : d; },
+        setNumber: (k, v) => s.setItem(k, String(v)),
+        getBoolean: (k, d) => { const v = s.getItem(k); return v !== null ? v === 'true' : d; },
+        setBoolean: (k, v) => s.setItem(k, String(v))
+    };
+})();
 
 export const Trace = {
     messageType: { log: 0, info: 1, warn: 2, error: 3 },
