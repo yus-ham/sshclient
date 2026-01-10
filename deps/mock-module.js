@@ -60,7 +60,13 @@ export const Utils = {
         toDevicePixels: (v) => v,
         toDeviceIndependentPixels: (v) => v
     },
-    openUrl: (url) => {}
+    openUrl: (url) => {
+        if (typeof window !== 'undefined') {
+            window.open(url, '_blank');
+            return true;
+        }
+        return false;
+    }
 };
 
 export const Application = {
