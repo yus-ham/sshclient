@@ -41,10 +41,17 @@ module.exports = (env) => {
     webpack.chainWebpack(config => {
         config.plugin('BunBuildPlugin').use(new BunBuildPlugin(platform));
 
+        config.plugins.delete('ForkTsCheckerWebpackPlugin');
+
         config.resolve.alias.delete('svelte$');
         config.entry('bundle').clear().add('./dist/bun-bundle.js');
         config.devtool(false);
         config.output.delete('sourceMapFilename');
+
+        // Matikan Code Splitting agar tetap satu file bundle.js utuh
+        config.optimization.splitChunks(false);
+        // Pastikan runtime inline atau masuk ke bundle.js
+        config.optimization.runtimeChunk(false);
 
         // Konfigurasi Watch
         config.watchOptions({
@@ -52,6 +59,18 @@ module.exports = (env) => {
         });
         
         config.optimization.minimize(false);
+
+        // Optimasi CopyWebpackPlugin: Jangan salin source code ke APK
+        config.plugin('CopyWebpackPlugin').tap(args => {
+            args[0].patterns.forEach(pattern => {
+                if (typeof pattern.from === 'string' && pattern.from.endsWith('app')) {
+                    pattern.globOptions = pattern.globOptions || {};
+                    pattern.globOptions.ignore = pattern.globOptions.ignore || [];
+                    pattern.globOptions.ignore.push('**/*.svelte', '**/*.ts', '**/*.js', '**/*.map');
+                }
+            });
+            return args;
+        });
     });
 
     return webpack.resolveConfig();
