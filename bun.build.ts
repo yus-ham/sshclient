@@ -15,12 +15,25 @@ console.log(`🚀 NativeScript-Bun-Hybrid Engine (${platform})`);
 const nsBunPlugin: BunPlugin = {
   name: "ns-bun-plugin",
   setup(builder) {
-    // 1. SVELTE: Force Client Version
-    builder.onResolve({ filter: /^svelte(\/internal)?$/ }, (args) => {
-        const svelteDir = path.resolve(process.cwd(), 'node_modules/svelte/src');
+    // 1. SVELTE: Force Client Version (Strong Alias)
+    builder.onResolve({ filter: /^svelte(\/.*)?$/ }, (args) => {
+        const svelteDir = path.resolve(process.cwd(), 'deps/svelte/src');
         if (args.path === 'svelte') return { path: path.join(svelteDir, 'index-client.js') };
         if (args.path === 'svelte/internal') return { path: path.join(svelteDir, 'internal/client/index.js') };
+        
+        // Handle deep sub-module imports (e.g., svelte/motion)
+        const subPath = args.path.replace(/^svelte\//, '');
+        const candidate = path.join(svelteDir, subPath + '.js');
+        if (fs.existsSync(candidate)) return { path: candidate };
+        
         return null;
+    });
+
+    // Jalankan juga untuk path yang sudah terlanjur di-resolve ke node_modules oleh Bun
+    builder.onResolve({ filter: /node_modules\/svelte/ }, (args) => {
+        const subPath = args.path.split('node_modules/svelte/')[1];
+        if (!subPath) return null;
+        return { path: path.resolve(process.cwd(), 'deps/svelte', subPath) };
     });
 
     // 2. MOCKS: Redirect problematic data & Node.js modules
@@ -77,7 +90,8 @@ const nsBunPlugin: BunPlugin = {
     // 4. TRANSFORMER
     builder.onLoad({ filter: /\.(ts|js)$/ }, async (args) => {
         const isCore = args.path.includes("@nativescript/core");
-        if (args.path.includes("node_modules") && !isCore) return null;
+        // Exclude node_modules AND deps/svelte from transformation
+        if ((args.path.includes("node_modules") || args.path.includes("deps/svelte")) && !isCore) return null;
 
         const source = await fs.promises.readFile(args.path, "utf8");
         if (!isCore && !source.includes("@NativeClass") && !source.includes("extend(") && !args.path.endsWith(".ts")) {

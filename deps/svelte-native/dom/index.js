@@ -1,3 +1,6 @@
+console.log("[SVELTE NATIVE DOM] shim imported");
+console.log("[SVELTE NATIVE DOM] shim imported");
+
 import * as core from '@nativescript/core';
 const { View: NSCoreView } = core;
 
@@ -7,13 +10,16 @@ const globalRef = typeof global !== 'undefined' ? global : window;
 // Mock/Singleton for elements
 const elementMap = globalRef.__SVELTE_NATIVE_ELEMENT_MAP__ || (globalRef.__SVELTE_NATIVE_ELEMENT_MAP__ = {});
 
+let gm = 0;
+
 function normalizeElementName(elementName) {
     return `${elementName.toLowerCase()}`;
 }
 
 class SvelteView {
-    constructor(nodeType = 1) {
-        this.nodeType = nodeType;
+    constructor(e = 1) {
+        this._domId = gm++;
+        this.nodeType = e;
         this.childNodes = [];
         this.parentNode = null;
         this.tagName = null;
@@ -21,10 +27,12 @@ class SvelteView {
         this.isTemplate = false;
     }
     get nodeName() {
-        return (this.nodeType === 3) ? "#text" :
-            (this.nodeType === 8) ? "#comment" :
-                (this.nodeType === 11) ? "#document-fragment" :
-                    (this.tagName || "").toUpperCase();
+        switch (this.nodeType) {
+            case 3: return "#text"
+            case 8: return "#comment"
+            case 11: return "#document-fragment"
+            default: return (this.tagName || "").toUpperCase();
+        }
     }
     get namespaceURI() { return "http://www.w3.org/1999/xhtml"; }
 
@@ -99,14 +107,22 @@ class SvelteView {
 
 // Svelte 5 retrieves getters from the prototype during init_operations.
 // We must define them explicitly so Object.getOwnPropertyDescriptor works.
+console.log("[SVELTE NATIVE DOM] Defining SvelteView prototype properties (firstChild, etc)... Node is:", typeof Node !== "undefined" ? Node : "UNDEFINED");
 Object.defineProperties(SvelteView.prototype, {
     firstChild: {
         get() {
-            if (!this.tagName && (!this.constructor || !this.constructor.name)) {
-                console.log(`[WALK-ERROR-NODE] firstChild dipanggil pada objek misterius! Keys:`, Object.keys(this));
-            }
             const res = (this.childNodes && this.childNodes.length > 0) ? this.childNodes[0] : null;
-            console.log(`[WALK] firstChild of ${this.tagName || (this.constructor && this.constructor.name) || 'UNDEFINED-NODE'} -> ${res ? (res.tagName || res.nodeName) : 'NULL'}`);
+            let debug = "NULL";
+            if (res) {
+                const isText = res.nodeType === 3;
+                const isComment = res.nodeType === 8;
+                const info = (isText || isComment) ? `${isText ? 'TEXT' : 'COMMENT'}: "${res.text?.split('\n')[0].trim()}"` : `${res.childNodes?.length || 0} children`;
+                debug = `${res.tagName || res.nodeName || res.constructor.name} (${info})`;
+            }
+            console.log(`[SVELTE NATIVE DOM] get firstChild of ${this.tagName || (this.constructor && this.constructor.name) || "UNDEFINED"}(${this._domId}) -> ${debug}`);
+            if (!this.tagName && this.constructor && this.constructor.name === "Object") {
+                console.trace("[SVELTE NATIVE DOM] Global object walk detected!");
+            }
             return res;
         },
         configurable: true
@@ -124,7 +140,15 @@ Object.defineProperties(SvelteView.prototype, {
             const nodes = parent.childNodes;
             const index = nodes.indexOf(this);
             const res = (index !== -1 && index < nodes.length - 1) ? nodes[index + 1] : null;
-            console.log(`[WALK] nextSibling of ${this.tagName || this.nodeName} -> ${res ? (res.tagName || res.nodeName) : 'NULL'}`);
+            
+            let debug = "NULL";
+            if (res) {
+                const isText = res.nodeType === 3;
+                const isComment = res.nodeType === 8;
+                const info = (isText || isComment) ? `${isText ? 'TEXT' : 'COMMENT'}: "${res.text?.split('\n')[0].trim()}"` : `${res.tagName || res.nodeName || res.constructor.name} (${info})`;
+                debug = `${res.tagName || res.nodeName || res.constructor.name} (${info})`;
+            }
+            console.log(`[SVELTE NATIVE DOM] get nextSibling of ${this.tagName || this.nodeName || (this.constructor && this.constructor.name)}(${this._domId}) -> ${debug}`);
             return res;
         },
         configurable: true
@@ -139,6 +163,7 @@ Object.defineProperties(SvelteView.prototype, {
 Object.defineProperties(SvelteView.prototype, {
     innerHTML: {
         set(html) {
+            console.log(`[SVELTE NATIVE DOM] set innerHTML: ${html.substring(0, 100).replace(/\n/g, '\\n')}...`);
             const target = this.tagName === 'template' ? this.content : this;
             target.childNodes = [];
             if (!html) return;
@@ -151,9 +176,11 @@ Object.defineProperties(SvelteView.prototype, {
             while ((match = tagRegex.exec(html)) !== null) {
                 if (match[1]) { // Comment
                     const commentText = match[1].slice(4, -3);
+                    console.log(`[SVELTE NATIVE DOM] innerHTML Comment: ${commentText}`);
                     currentParent.appendChild(installGlobalShims().createComment(commentText));
                 } else if (match[3]) { // Open tag
                     const tagName = match[3].toLowerCase();
+                    console.log(`[SVELTE NATIVE DOM] innerHTML Open tag: ${tagName}. currentParent: ${currentParent.tagName || currentParent.constructor.name}`);
                     const node = createElement(tagName);
 
                     const attrStr = match[4];
@@ -165,6 +192,7 @@ Object.defineProperties(SvelteView.prototype, {
                         }
                     }
 
+                    console.log(`[SVELTE NATIVE DOM] innerHTML Appending ${tagName} to ${currentParent.tagName || currentParent.constructor.name}`);
                     currentParent.appendChild(node);
                     const isSelfClosing = attrStr && attrStr.trim().endsWith('/');
                     const voidTags = ["image", "activityindicator", "progress", "slider", "switch"];
@@ -174,11 +202,14 @@ Object.defineProperties(SvelteView.prototype, {
                     }
                 } else if (match[6]) { // Close tag
                     const tagName = match[6].toLowerCase();
+                    console.log(`[SVELTE NATIVE DOM] innerHTML Close tag: ${tagName}. currentParent before pop: ${currentParent.tagName || currentParent.constructor.name}`);
                     const voidTags = ["image", "activityindicator", "progress", "slider", "switch"];
                     if (!voidTags.includes(tagName)) {
                         currentParent = currentParent.parentNode || target;
+                        console.log(`[SVELTE NATIVE DOM] innerHTML currentParent after pop: ${currentParent.tagName || currentParent.constructor.name}`);
                     }
                 } else if (match[7]) { // Text (KEEP WHITESPACE for Svelte 5 walking)
+                    console.log(`[SVELTE NATIVE DOM] innerHTML Text: "${match[7].replace(/\n/g, '\\n')}"`);
                     currentParent.appendChild(installGlobalShims().createTextNode(match[7]));
                 }
             }
@@ -379,6 +410,17 @@ function initializeDom() {
     if (initializedDom) return;
     initializedDom = true;
     registerNativeElements();
+        const desc = Object.getOwnPropertyDescriptor(SvelteView.prototype, "firstChild");
+    console.log("[SVELTE NATIVE DOM] initializeDom check. firstChild getter:", desc?.get ? "DEFINED" : "UNDEFINED");
+    
+    if (!desc?.get) {
+        console.warn("[SVELTE NATIVE DOM] firstChild getter missing! Redefining...");
+        Object.defineProperty(SvelteView.prototype, "firstChild", {
+            get() { return (this.childNodes && this.childNodes.length > 0) ? this.childNodes[0] : null; },
+            configurable: true
+        });
+    }
+console.log("[SVELTE NATIVE DOM] shim initialized");
     return installGlobalShims();
 }
 
@@ -421,23 +463,21 @@ if (ViewPrototype) {
             configurable: true
         },
         parentNode: {
-            get() { return this.parent; },
+            get() { return this._parentNode || this.parent; },
+            set(v) { this._parentNode = v; },
             configurable: true
         },
         firstChild: {
             get() {
-                if (this.constructor && (this.constructor.name === 'NativeScriptGlobalObject' || this.constructor.name === 'NativeScriptGlobalObjectImpl')) {
-                    console.log(`[BONGKAR-GLOBAL] Identitas:`, {
-                        constructor: this.constructor.name,
-                        nodeType: this.nodeType,
-                        tagName: this.tagName,
-                        isWindow: (typeof window !== 'undefined' && this === window),
-                        isGlobal: (typeof global !== 'undefined' && this === global),
-                        keys: Object.keys(this).slice(0, 30)
-                    });
-                }
                 const res = (this.childNodes && this.childNodes.length > 0) ? this.childNodes[0] : null;
-                console.log(`[WALK] firstChild of ${this.tagName || (this.constructor && this.constructor.name) || 'UNDEFINED'} -> ${res ? (res.tagName || res.nodeName) : 'NULL'}`);
+                let debug = "NULL";
+                if (res) {
+                    const isText = res.nodeType === 3;
+                    const isComment = res.nodeType === 8;
+                    const info = (isText || isComment) ? `${isText ? 'TEXT' : 'COMMENT'}: "${res.text?.split('\n')[0].trim()}"` : `${res.childNodes?.length || 0} children`;
+                    debug = `${res.tagName || res.nodeName || res.constructor.name} (${info})`;
+                }
+                console.log(`[SVELTE NATIVE DOM] get firstChild of ${this.tagName || (this.constructor && this.constructor.name) || 'UNDEFINED'} -> ${debug}`);
                 return res;
             },
             configurable: true
@@ -455,7 +495,15 @@ if (ViewPrototype) {
                 const nodes = parent.childNodes;
                 const index = nodes.indexOf(this);
                 const res = (index !== -1 && index < nodes.length - 1) ? nodes[index + 1] : null;
-                console.log(`[WALK] nextSibling of ${this.tagName || this.nodeName || this.constructor.name} -> ${res ? (res.tagName || res.nodeName) : 'NULL'}`);
+                
+                let debug = "NULL";
+                if (res) {
+                    const isText = res.nodeType === 3;
+                    const isComment = res.nodeType === 8;
+                    const info = (isText || isComment) ? `${isText ? 'TEXT' : 'COMMENT'}: "${res.text?.split('\n')[0].trim()}"` : `${res.childNodes?.length || 0} children`;
+                    debug = `${res.tagName || res.nodeName || res.constructor.name} (${info})`;
+                }
+                console.log(`[SVELTE NATIVE DOM] get nextSibling of ${this.tagName || this.nodeName || (this.constructor && this.constructor.name)} -> ${debug}`);
                 return res;
             },
             configurable: true
@@ -495,14 +543,21 @@ if (ViewPrototype) {
         }
         this.childNodes.push(child);
         child.parentNode = this;
+        console.log(`[SVELTE NATIVE DOM] appendChild: ${child.tagName || child.nodeName}(${child._domId}) attached to ${this.tagName || (this.constructor && this.constructor.name)}(${this._domId}). isNative: ${child instanceof NSCoreView}`);
+        
         if (child instanceof NSCoreView) {
-            if (this.addChild) {
+            // Only use addChild if the instance truly supports it (e.g. LayoutBase)
+            // and it's not our own patched version from the prototype.
+            if (this.addChild && this.addChild !== ViewPrototype.addChild) {
+                console.log(`[SVELTE NATIVE DOM] Native addChild called on ${this.tagName || this.constructor.name}(${this._domId}) for ${child.tagName || child.constructor.name}(${child._domId})`);
                 this.addChild(child);
             } else {
                 const isActionBar = child.constructor.name === 'ActionBar' || child.tagName === 'actionbar';
                 if (isActionBar && ("actionBar" in this)) {
+                    console.log(`[SVELTE NATIVE DOM] Setting actionBar of ${this.tagName || this.constructor.name} to ${child.tagName}(${child._domId})`);
                     this.actionBar = child;
                 } else if ("content" in this) {
+                    console.log(`[SVELTE NATIVE DOM] Setting content of ${this.tagName || this.constructor.name} to ${child.tagName || child.nodeName}(${child._domId})`);
                     this.content = child;
                 }
             }
@@ -568,11 +623,6 @@ if (ViewPrototype) {
         } else if (this.parent) {
             this.parent.removeChild(this);
         }
-    };
-
-    const originalAddChild = ViewPrototype.addChild;
-    ViewPrototype.addChild = function (child) {
-        if (originalAddChild) return originalAddChild.call(this, child);
     };
 
     const originalInsertChild = ViewPrototype.insertChild;

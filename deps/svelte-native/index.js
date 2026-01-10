@@ -13,7 +13,7 @@ function svelteNativeNoFrame(rootElement, data) {
     // WEB PREVIEW MODE (BUN/BROWSER)
     // Only activate if we are NOT in a native environment
     if (typeof window !== 'undefined' && window.document && !global.__ANDROID__ && !global.__IOS__) {
-        console.log("[SvelteNative] Web Preview Mode Activated");
+        console.log("[SVELTE NATIVE] Web Preview Mode Activated");
         return new Promise((resolve) => {
             // Create a root container
             let appRoot = document.getElementById('app-root');
@@ -50,6 +50,7 @@ function svelteNativeNoFrame(rootElement, data) {
             }
             
             const result = root ? (root.nativeElement || root) : frag;
+            console.log("[SVELTE NATIVE] Application.run create returns:", result ? (result.constructor.name + " (" + result.toString() + ")") : "NULL");
             return result;
         };
         //wait for launch before returning

@@ -1,1 +1,0 @@
-// NativeScript dummy entry for Bun integration

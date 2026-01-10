@@ -15,14 +15,13 @@
     "@nativescript/webpack": "~5.0.28",
     "bun-plugin-svelte": "^0.0.6",
     "ignore-loader": "^0.1.2",
-    "svelte": "~5",
+    "svelte": "file:./deps/svelte",
     "svelte-loader": "^3.2.4",
     "svelte-preprocess": "^6.0.3",
     "typescript": "~5.9.2"
   },
   "overrides": {
-    "@nativescript/core": "^9.0.0",
-    "svelte": "~5"
+    "@nativescript/core": "^9.0.0"
   },
   "scripts": {
     "dev": "bun ./index.html --host=0.0.0.0 --console",
