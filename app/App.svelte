@@ -1,6 +1,5 @@
-<page>
-    <actionBar title="Minimal App"></actionBar>
-    <stackLayout>
-        <label text="Hello Svelte Native!"></label>
-    </stackLayout>
-</page>
+<script>
+    import Home from './components/Home.svelte';
+</script>
+
+<Home />

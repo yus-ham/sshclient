@@ -145,7 +145,7 @@ Object.defineProperties(SvelteView.prototype, {
             if (res) {
                 const isText = res.nodeType === 3;
                 const isComment = res.nodeType === 8;
-                const info = (isText || isComment) ? `${isText ? 'TEXT' : 'COMMENT'}: "${res.text?.split('\n')[0].trim()}"` : `${res.tagName || res.nodeName || res.constructor.name} (${info})`;
+                const info = (isText || isComment) ? `${isText ? 'TEXT' : 'COMMENT'}: "${res.text?.split('\n')[0].trim()}"` : `${res.childNodes?.length || 0} children`;
                 debug = `${res.tagName || res.nodeName || res.constructor.name} (${info})`;
             }
             console.log(`[SVELTE NATIVE DOM] get nextSibling of ${this.tagName || this.nodeName || (this.constructor && this.constructor.name)}(${this._domId}) -> ${debug}`);

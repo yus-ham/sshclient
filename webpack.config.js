@@ -51,7 +51,7 @@ module.exports = (env) => {
             ignored: ['**/node_modules/**', '**/dist/**', '**/deps/svelte/**']
         });
         
-        config.optimization.minimize(true);
+        config.optimization.minimize(false);
     });
 
     return webpack.resolveConfig();
