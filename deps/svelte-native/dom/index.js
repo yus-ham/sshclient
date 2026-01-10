@@ -463,7 +463,7 @@ if (ViewPrototype) {
             configurable: true
         },
         parentNode: {
-            get() { return this._parentNode || this.parent; },
+            get() { return this._parentNode || this.parent || null; },
             set(v) { this._parentNode = v; },
             configurable: true
         },
@@ -617,6 +617,42 @@ if (ViewPrototype) {
     ViewPrototype.getAttribute = function (name) {
         return this[name];
     };
+
+    const originalAddEventListener = ViewPrototype.addEventListener;
+    ViewPrototype.addEventListener = function (eventName, callback, options) {
+        const wrappedCallback = (args) => {
+            if (args && !args.target) {
+                args.target = args.object;
+            }
+            if (args && !args.currentTarget) {
+                args.currentTarget = args.object;
+            }
+            return callback.call(this, args);
+        };
+        // Store the wrapped callback to allow removal if needed
+        this._wrappedListeners = this._wrappedListeners || new Map();
+        this._wrappedListeners.set(callback, wrappedCallback);
+        
+        if (originalAddEventListener) {
+            return originalAddEventListener.call(this, eventName, wrappedCallback, options);
+        }
+    };
+
+    const originalRemoveEventListener = ViewPrototype.removeEventListener;
+    ViewPrototype.removeEventListener = function (eventName, callback, options) {
+        const wrapped = this._wrappedListeners?.get(callback);
+        if (wrapped) {
+            if (originalRemoveEventListener) {
+                originalRemoveEventListener.call(this, eventName, wrapped, options);
+            }
+            this._wrappedListeners.delete(callback);
+        } else {
+            if (originalRemoveEventListener) {
+                originalRemoveEventListener.call(this, eventName, callback, options);
+            }
+        }
+    };
+
     ViewPrototype.remove = function () {
         if (this.parentNode) {
             this.parentNode.removeChild(this);
