@@ -32,7 +32,7 @@ NativeScript relies heavily on Webpack for platform-specific build steps (Androi
 
 ### Prerequisites
 *   [Bun](https://bun.sh)
-*   NativeScript environment setup (Android SDK / Xcode)
+*   [NativeScript environment setup](https://docs.nativescript.org/setup/) (Android SDK / Xcode)
 
 ### Development
 
