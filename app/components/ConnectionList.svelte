@@ -3,12 +3,10 @@
     let { connections = [], onadd, onconnect } = $props();
 
     function connect(conn) {
-        console.log("[ConnectionList] Item tapped:", conn.name);
         if (onconnect) onconnect(conn);
     }
 
     function addConnection() {
-        console.log("[ConnectionList] Add button tapped");
         if (onadd) onadd();
     }
 </script>

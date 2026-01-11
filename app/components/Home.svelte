@@ -13,11 +13,9 @@
 
     function save() {
         ApplicationSettings.setString(SAVED_KEY, JSON.stringify(connections));
-        console.log("Connections saved to storage.");
     }
 
     function addNew() {
-        console.log("Adding new dummy connection...");
         // Add dummy data for testing persistence
         connections = [...connections, { 
             name: "Server " + (connections.length + 1), 
@@ -32,7 +30,6 @@
     }
 
     function openLink(url) {
-        console.log("Opening URL via Utils:", url);
         Utils.openUrl(url);
     }
 </script>

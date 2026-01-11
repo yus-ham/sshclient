@@ -177,7 +177,6 @@ function asSvelteTransition(node, delay = 0, duration = 300, curve = CoreTypes.A
                 svelteCurve = linear;
                 break;
             default:
-                console.warn("Unsupported nativescript animation name, reverting to linear");
                 svelteCurve = linear;
         }
     }
@@ -194,7 +193,6 @@ function asSvelteTransition(node, delay = 0, duration = 300, curve = CoreTypes.A
     let last_t = -1;
     const cancelNativeAnimation = () => {
         if (animation && animation.isPlaying) {
-            //  console.log("cancelling animation on ", node);
             let oldanimation = animation;
             animation = null;
             oldanimation.cancel();
@@ -250,26 +248,22 @@ function asSvelteTransition(node, delay = 0, duration = 300, curve = CoreTypes.A
                 applyAnimAtTime(0);
                 direction = AnimationDirection.In;
                 last_t = 0;
-                //   console.log("forward animation detected!", node);
                 //don't start our full animation yet since this is just the init frame, and there will be a delay. so wait for next frame
                 // return;
             }
             else {
                 // Outro transition (t starts at 1 or >= 0.5)
-                //  console.log("reverse animation detected!", node);
                 direction = AnimationDirection.Out;
                 last_t = t;
             }
         }
         //have we changed direction?
         if (direction == AnimationDirection.In && last_t > t) {
-            // console.log("animation changed direction (In -> Out)", t, node);
             direction = AnimationDirection.Out;
             cancelNativeAnimation();
             applyAnimAtTime(t);
         }
         if (direction == AnimationDirection.Out && last_t < t) {
-            //    console.log("animation changed direction (Out -> In)", t, node);
             direction = AnimationDirection.In;
             cancelNativeAnimation();
             applyAnimAtTime(t);
@@ -299,7 +293,6 @@ function asSvelteTransition(node, delay = 0, duration = 300, curve = CoreTypes.A
                 nsAnimation.curve = CoreTypes.AnimationCurve.cubicBezier(finalCurve.x1, finalCurve.y1, finalCurve.x2, finalCurve.y2);
                 nsAnimation.duration = (1 - t) * duration;
             }
-            //console.log("animation created", t, (direction == AnimationDirection.In) ? "Intro" : "Outro", nsAnimation, node);
             // kick it off
             animation = node.nativeView.createAnimation(nsAnimation);
             function animateBlock() {

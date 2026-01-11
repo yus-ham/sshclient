@@ -6,7 +6,6 @@ const platform = process.env.NS_PLATFORM || "android";
 const isProd = process.env.NODE_ENV === "production";
 const outDir = `./dist`;
 
-console.log(`🚀 NativeScript-Bun-Hybrid Engine (${platform})`);
 
 const result = await bunBuild({
   entrypoints: ["./app/app.ts"],
@@ -34,8 +33,9 @@ const result = await bunBuild({
   },
 });
 
-if (result.success) console.log("✅ Bun Hybrid build successful!");
-else {
-    result.logs.forEach(l => console.error(l));
+if (!result.success) {
+    if (result.logs.length) {
+         console.error(result.logs.join('\n'));
+    }
     process.exit(1);
 }

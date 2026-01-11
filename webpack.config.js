@@ -11,7 +11,6 @@ class BunBuildPlugin {
 
     apply(compiler) {
         compiler.hooks.beforeCompile.tap('BunBuildPlugin', () => {
-            console.log(`\n[Bun-Wrapper] 🚀 Compiling Svelte 5 with Bun...`);
             spawnSync('bun', ['bun.build.ts'], {
                 env: { ...process.env, NS_PLATFORM: this.platform },
                 stdio: 'inherit',
@@ -31,7 +30,6 @@ module.exports = (env) => {
 
     // 1. Jalankan Bun Bundler
     const platform = env.android ? 'android' : 'ios';
-    // console.log(`\n[Bun-Wrapper] 🚀 Compiling Svelte 5 with Bun (MINIFY OFF)...`);
     // spawnSync('bun', ['bun.build.ts'], {
     //     env: { ...process.env, NS_PLATFORM: platform },
     //     stdio: 'inherit',
