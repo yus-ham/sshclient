@@ -13,17 +13,66 @@
   font-weight: 400;
 }
 
-/* NativeScript-valid CSS only below */
-.h2 {
-    font-size: 24;
+/* From web.css */
+Page, Frame, StackLayout, GridLayout, FlexboxLayout, ContentView {
+    display: block;
+    box-sizing: border-box;
+}
+
+Page {
+    background-color: #f0f0f0;
+}
+
+ActionBar {
+    display: block;
+    background-color: #3A53FF;
+    color: white;
+    padding: 16;
     font-weight: bold;
 }
 
-.p-20 {
-    padding: 20;
+Label {
+    display: block;
+    padding: 4;
 }
 
-.btn-primary {
+Button {
+    display: block;
     background-color: #3A53FF;
     color: white;
+    padding: 12;
+    margin: 8;
+    border-radius: 4;
+    text-align: center;
+}
+
+StackLayout {
+    display: flex;
+    flex-direction: column;
+}
+
+WrapLayout {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+GridLayout {
+    display: grid;
+}
+
+.connection-item {
+    padding: 10;
+    border-bottom-width: 1;
+    border-bottom-color: #ddd;
+}
+
+.h2 {
+    font-size: 24;
+    font-weight: bold;
+    margin-bottom: 15;
+}
+
+.link {
+    color: #3A53FF;
+    text-decoration: underline;
 }

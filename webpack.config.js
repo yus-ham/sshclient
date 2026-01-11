@@ -62,6 +62,13 @@ module.exports = (env) => {
 
         // Optimasi CopyWebpackPlugin: Jangan salin source code ke APK
         config.plugin('CopyWebpackPlugin').tap(args => {
+            // Pastikan app.css tersalin eksplisit
+            args[0].patterns.push({
+                from: path.resolve(__dirname, 'app/app.css'),
+                to: 'app.css',
+                noErrorOnMissing: true
+            });
+
             args[0].patterns.forEach(pattern => {
                 if (typeof pattern.from === 'string' && pattern.from.endsWith('app')) {
                     pattern.globOptions = pattern.globOptions || {};
