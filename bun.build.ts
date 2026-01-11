@@ -30,6 +30,7 @@ const result = await bunBuild({
     "global.__ANDROID__": platform === "android" ? "true" : "false",
     "global.__IOS__": platform === "ios" ? "true" : "false",
     "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "development"),
+    "__COMMONJS__": "true",
   },
 });
 

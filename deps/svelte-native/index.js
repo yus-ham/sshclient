@@ -1,6 +1,7 @@
+import './early-reset';
 import '@nativescript/core/globals';
 import '@nativescript/core/ui/frame/activity';
-import '@nativescript/core/bundle-entry-points';
+// import '@nativescript/core/bundle-entry-points';
 import { Application } from '@nativescript/core';
 import { initializeDom, createElement, navigate } from './dom';
 import { mount, unmount } from 'svelte';

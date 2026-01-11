@@ -558,7 +558,20 @@ if (ViewPrototype) {
         child.parentNode = this;
 
         if (child instanceof NSCoreView) {
-            // Calculate actual native index by counting only NSCoreView instances
+            const isFrame = this.tagName === 'frame' || this.constructor.name === 'Frame';
+            const isPage = child.tagName === 'page' || child.constructor.name === 'Page';
+
+            if (isFrame && isPage) {
+                try {
+                    this.navigate({
+                        create: () => child,
+                        clearHistory: true
+                    });
+                } catch (e) {
+                }
+                return child;
+            }
+
             let nativeIndex = 0;
             for (const node of this.childNodes) {
                 if (node === child) break;
