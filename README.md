@@ -24,7 +24,7 @@ NativeScript relies heavily on Webpack for platform-specific build steps (Androi
 ## ⚡ Key Features & Fixes
 
 *   **Svelte 5 Support:** Patched `svelte-native` DOM adapter to work with Svelte 5's new reactivity system and event delegation mechanism.
-*   **Custom DOM Shim:** Implements a lightweight DOM shim to satisfy Svelte's runtime requirements in the NativeScript environment (e.g., `parentNode`, `addEventListener` mapping).
+*   **Custom DOM Shim:** Implements a lightweight DOM shim to satisfy Svelte's runtime requirements in the NativeScript environment.
 *   **Web Preview:** Run the app directly in a browser (via Bun) for rapid UI iteration. It works out-of-the-box.
 *   **Fast Build:** Leverages Bun's speed for the transpilation phase.
 
