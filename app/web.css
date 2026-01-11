@@ -1,22 +1,13 @@
+@import "./app.css";
+
 /* Web-only Polyfills for NativeScript Tags */
 /* This file is only loaded by Bun during web preview */
 
-Page, Frame, StackLayout, GridLayout, FlexboxLayout, ContentView {
-    display: block;
-    box-sizing: border-box;
-}
-
 Page {
-    background-color: #f0f0f0;
     min-height: 100vh;
 }
 
 ActionBar {
-    display: block;
-    background-color: #3A53FF;
-    color: white;
-    padding: 16px;
-    font-weight: bold;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
@@ -24,38 +15,12 @@ ActionBar[title]::after {
     content: attr(title);
 }
 
-Label {
-    display: block;
-    padding: 4px;
-}
-
 Label[text]::after, Button[text]::after {
     content: attr(text);
 }
 
 Button {
-    display: block;
-    background-color: #3A53FF;
-    color: white;
-    padding: 12px;
-    margin: 8px;
-    border-radius: 4px;
-    text-align: center;
     cursor: pointer;
-}
-
-StackLayout {
-    display: flex;
-    flex-direction: column;
-}
-
-WrapLayout {
-    display: flex;
-    flex-wrap: wrap;
-}
-
-GridLayout {
-    display: grid;
 }
 
 GridLayout[columns="*, auto"] {
@@ -69,15 +34,7 @@ GridLayout[rows="auto, auto"] {
 .connection-item {
     display: grid;
     grid-template-columns: 1fr auto;
-    border-bottom: 1px solid #ddd;
-    padding: 10px;
     cursor: pointer;
-}
-
-.h2 {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 15px;
 }
 
 FormattedString {
@@ -93,8 +50,6 @@ Span[text]::after {
 }
 
 .link {
-    color: #3A53FF !important;
-    text-decoration: underline !important;
     cursor: pointer;
     position: relative;
     z-index: 10;

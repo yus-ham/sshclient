@@ -60,21 +60,13 @@ module.exports = (env) => {
         
         config.optimization.minimize(false);
 
-        // Optimasi CopyWebpackPlugin: Jangan salin source code ke APK
+        // Optimasi CopyWebpackPlugin: Pastikan app.css tersalin, 
+        // file sumber (.svelte, .ts, dll) tidak tersalin karena tidak masuk pattern default.
         config.plugin('CopyWebpackPlugin').tap(args => {
-            // Pastikan app.css tersalin eksplisit
             args[0].patterns.push({
                 from: path.resolve(__dirname, 'app/app.css'),
                 to: 'app.css',
                 noErrorOnMissing: true
-            });
-
-            args[0].patterns.forEach(pattern => {
-                if (typeof pattern.from === 'string' && pattern.from.endsWith('app')) {
-                    pattern.globOptions = pattern.globOptions || {};
-                    pattern.globOptions.ignore = pattern.globOptions.ignore || [];
-                    pattern.globOptions.ignore.push('**/*.svelte', '**/*.ts', '**/*.js', '**/*.map');
-                }
             });
             return args;
         });
