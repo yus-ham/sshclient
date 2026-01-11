@@ -14,7 +14,7 @@ NativeScript relies heavily on Webpack for platform-specific build steps (Androi
     *   Compiles `app/**/*.ts` and `app/**/*.svelte` (Svelte 5) into a single optimized `dist/bun-bundle.js`.
     *   Handles Svelte 5 compilation (custom DOM adapter for NativeScript).
     *   Provides a blazing fast HMR (Hot Module Replacement) server for web preview.
-    *   Resolves dependencies with a custom plugin to prioritize local patched versions of `svelte` and `svelte-native`.
+    *   Resolves dependencies with a custom plugin to prioritize the local patched version of `svelte-native` and standard `svelte` 5.
 
 2.  **Webpack (The Glue):**
     *   Wraps the pre-bundled `dist/bun-bundle.js` into the final NativeScript package.
@@ -25,7 +25,7 @@ NativeScript relies heavily on Webpack for platform-specific build steps (Androi
 
 *   **Svelte 5 Support:** Patched `svelte-native` DOM adapter to work with Svelte 5's new reactivity system and event delegation mechanism.
 *   **Custom DOM Shim:** Implements a lightweight DOM shim to satisfy Svelte's runtime requirements in the NativeScript environment (e.g., `parentNode`, `addEventListener` mapping).
-*   **Web Preview:** Run the app directly in a browser (via Bun) for rapid UI iteration, mocking NativeScript modules like `ApplicationSettings` and `Utils`.
+*   **Web Preview:** Run the app directly in a browser (via Bun) for rapid UI iteration. It works out-of-the-box.
 *   **Fast Build:** Leverages Bun's speed for the transpilation phase.
 
 ## 🚀 How to Run
