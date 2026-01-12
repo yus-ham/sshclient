@@ -1,21 +1,3 @@
-// The "Fat Mock" that ensures css-tree doesn't crash
-const empty = { 
-    syntax: "@empty { }", // Needs to match the regex in preprocessAtrules
-    descriptors: {} 
-};
-
-const fatObj = {
-    atrules: empty,
-    properties: empty,
-    types: empty,
-    syntaxes: empty,
-    units: empty
-};
-
-export const createRequire = () => (id) => {
-    return fatObj;
-};
-
 export const ApplicationSettings = (() => {
     const s = (typeof window !== 'undefined' && window.localStorage) || { getItem: () => null, setItem: () => {}, removeItem: () => {} };
     return {
@@ -118,5 +100,4 @@ export class GridLayout extends LayoutBase {}
 export class FlexboxLayout extends LayoutBase {}
 export class ScrollView extends View {}
 export class Image extends View {}
-
-export default fatObj;
+export default {}

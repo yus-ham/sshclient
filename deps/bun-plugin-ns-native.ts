@@ -1,19 +1,14 @@
 import { type BunPlugin } from "bun";
 import fs from "node:fs";
 import path from "node:path";
-import ts from "typescript";
 
 // NativeScript Webpack Transformer for @NativeClass support
 const nativeClassTransformer = require("@nativescript/webpack/dist/transformers/NativeClass").default;
 
+
 export const nsNativePlugin = (platform: string): BunPlugin => ({
   name: "ns-native-plugin",
   setup(builder) {
-    // 1. MOCKS: Redirect problematic data & Node.js modules
-    builder.onResolve({ filter: /^(module|node:module|mdn-data.*|.*patch\.json|.*css-tree.*data.*)$/ }, () => {
-        return { path: path.resolve(process.cwd(), "deps/mock-module.js") };
-    });
-
     // 2. NATIVESCRIPT RESOLVER: Handle platform specific extensions (.android.ts, .ios.ts) & Aliases
     builder.onResolve({ filter: /.*/ }, (args) => {
       let target = args.path;
@@ -63,6 +58,28 @@ export const nsNativePlugin = (platform: string): BunPlugin => ({
       }
       return null;
     });
+
+    builder.onResolve({ filter: /^module$/ }, () => {
+      return { path: 'module', namespace: 'mock' };
+    });
+
+    builder.onLoad({ filter: /^module$/, namespace: 'mock' }, () => {
+      return {
+        loader: 'js',
+        contents: `
+          export function createRequire() {
+            const empty = { syntax: "@empty { }", descriptors: {} }
+            return (id) => ({
+              properties: empty,
+              syntaxes: empty,
+              atrules: empty,
+              types: empty,
+              units: empty,
+            })
+          }
+        `
+      }
+    })
 
     /*
     // 3. TRANSFORMER: Apply @NativeClass transformation

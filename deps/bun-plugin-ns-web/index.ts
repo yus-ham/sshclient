@@ -12,7 +12,7 @@ const nsResolver = {
 
       // 0. Handle Node.js built-ins
       if (targetPath === 'module' || targetPath === 'node:module') {
-         return { path: path.resolve(process.cwd(), 'deps/mock-module.js') };
+         return { path: path.resolve(import.meta.dirname, 'ns-web-shims.js') };
       }
 
       // Handle css-tree browser overrides
@@ -29,7 +29,7 @@ const nsResolver = {
       
       // 2. Mock @nativescript/core (dan subpath-nya)
       if (targetPath.startsWith('@nativescript/core')) {
-        return { path: path.resolve(process.cwd(), 'deps/mock-module.js') };
+        return { path: path.resolve(import.meta.dirname, 'ns-web-shims.js') };
       } 
       
       return null;
