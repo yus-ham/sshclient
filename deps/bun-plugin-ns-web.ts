@@ -35,6 +35,9 @@ const nsResolver = {
       return null;
     });
 
+    build.onResolve({ filter: /^\.\/reconciler\.js$/ }, () => {
+      return { path: path.resolve(import.meta.dirname, 'patch-svelte-client-dom-reconciler.js') }
+    })
   },
 };
 
