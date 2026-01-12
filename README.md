@@ -4,7 +4,7 @@ This project is an experimental proof-of-concept demonstrating how to use **Bun*
 
 ## 🎯 The Goal
 
-To replace the heavy lifting of Webpack for JavaScript/TypeScript/Svelte compilation with Bun, while keeping the necessary NativeScript infrastructure intact.
+The primary goal is to accelerate the Svelte Native development workflow by leveraging Bun for rapid compilation of JavaScript/TypeScript/Svelte files, significantly speeding up the feedback loop. Webpack's role is streamlined to act as a thin wrapper for platform-specific packaging, rather than handling the heavy lifting of code compilation.
 
 ## 🛠️ Architecture: "The Hybrid Approach"
 
@@ -21,6 +21,14 @@ NativeScript relies heavily on Webpack for platform-specific build steps (Androi
     *   Handles native platform tasks (Android/iOS builds).
     *   Running in "dumb mode" (minification disabled, sourcemaps off) to act purely as a carrier for the Bun output.
 
+## ⚙️ Key Technologies
+
+*   **UI Framework:** Svelte 5
+*   **Native Mobile Framework:** NativeScript
+*   **Language:** TypeScript
+*   **Primary Bundler/Compiler:** Bun
+*   **Secondary Bundler/Packager:** Webpack
+*   **Key Dependencies:** `@nativescript-community/svelte-native`, `@nativescript/core`, `bun-plugin-svelte`
 ## ⚡ Key Features & Fixes
 
 *   **Svelte 5 Support:** Patched `svelte-native` DOM adapter to work with Svelte 5's new reactivity system and event delegation mechanism.
@@ -58,7 +66,9 @@ This runs the custom build pipeline which triggers Bun build + NativeScript run.
 
 *   `bun.build.ts`: The Bun build configuration.
 *   `webpack.config.js`: The "thin" Webpack wrapper that consumes Bun's output.
-*   `deps/`: Patched versions of `svelte-native` and mocks.
+*   `deps/`: Contains patched versions of `svelte-native` and mocks, including:
+    *   `bun-plugin-ns-native.ts`: Custom Bun plugin for NativeScript module resolution.
+    *   `bun-plugin-ns-web/`: Custom Bun plugin for web preview shims.
 *   `app/`: Source code (Svelte 5 + TS).
 
 ---
